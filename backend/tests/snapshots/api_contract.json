@@ -1,0 +1,3033 @@
+{
+ "audit.list": {
+  "body": {
+   "items": [
+    {
+     "action": "knowledge.create",
+     "actor_id": "<uuid>",
+     "actor_type": "user",
+     "created_at": "<datetime+00:00>",
+     "entity": "knowledge_article",
+     "entity_id": "<uuid>",
+     "id": "<uuid>",
+     "ip": "testclient",
+     "payload": {}
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "conversations.get": {
+  "body": {
+   "branch_id": null,
+   "channel": "whatsapp",
+   "contact": {
+    "id": "<uuid>",
+    "name": "Client alpha",
+    "opted_out": false,
+    "phone_e164": "+77015550099"
+   },
+   "id": "<uuid>",
+   "language": "ru",
+   "last_message": {
+    "at": "<datetime+00:00>",
+    "author": "ai",
+    "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
+   },
+   "last_message_at": "<datetime+00:00>",
+   "mode": "waiting_admin",
+   "open_task_id": "<uuid>",
+   "owner_user_id": null,
+   "state": {
+    "language": "ru"
+   },
+   "status": "open",
+   "unread_count": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "conversations.list": {
+  "body": {
+   "items": [
+    {
+     "branch_id": null,
+     "channel": "whatsapp",
+     "contact": {
+      "id": "<uuid>",
+      "name": "Client alpha",
+      "opted_out": false,
+      "phone_e164": "+77015550099"
+     },
+     "id": "<uuid>",
+     "language": "ru",
+     "last_message": {
+      "at": "<datetime+00:00>",
+      "author": "ai",
+      "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
+     },
+     "last_message_at": "<datetime+00:00>",
+     "mode": "waiting_admin",
+     "open_task_id": "<uuid>",
+     "owner_user_id": null,
+     "status": "open",
+     "unread_count": {
+      "int": 1
+     }
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "conversations.read": {
+  "body": {
+   "branch_id": null,
+   "channel": "whatsapp",
+   "contact": {
+    "id": "<uuid>",
+    "name": "Client alpha",
+    "opted_out": false,
+    "phone_e164": "+77015550099"
+   },
+   "id": "<uuid>",
+   "language": "ru",
+   "last_message": {
+    "at": "<datetime+00:00>",
+    "author": "ai",
+    "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
+   },
+   "last_message_at": "<datetime+00:00>",
+   "mode": "ai",
+   "open_task_id": "<uuid>",
+   "owner_user_id": "<uuid>",
+   "status": "open",
+   "unread_count": {
+    "int": 0
+   }
+  },
+  "status": 200
+ },
+ "conversations.release": {
+  "body": {
+   "branch_id": null,
+   "channel": "whatsapp",
+   "contact": {
+    "id": "<uuid>",
+    "name": "Client alpha",
+    "opted_out": false,
+    "phone_e164": "+77015550099"
+   },
+   "id": "<uuid>",
+   "language": "ru",
+   "last_message": {
+    "at": "<datetime+00:00>",
+    "author": "ai",
+    "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
+   },
+   "last_message_at": "<datetime+00:00>",
+   "mode": "ai",
+   "open_task_id": "<uuid>",
+   "owner_user_id": "<uuid>",
+   "status": "open",
+   "unread_count": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "conversations.simulate": {
+  "body": {
+   "conversation_id": "<uuid>",
+   "message_id": "<uuid>",
+   "mode": "ai",
+   "replies": [
+    {
+     "author": "ai",
+     "author_user_id": null,
+     "direction": "out",
+     "error": null,
+     "id": "<uuid>",
+     "is_internal_note": false,
+     "language": "ru",
+     "media_url": null,
+     "message_type": "text",
+     "provider_status": "sent",
+     "received_at": "<datetime+00:00>",
+     "text": "«Мужская стрижка» — 5000 ₸, длительность 60 мин. Хотите записаться?"
+    }
+   ]
+  },
+  "status": 200
+ },
+ "conversations.takeover": {
+  "body": {
+   "branch_id": null,
+   "channel": "whatsapp",
+   "contact": {
+    "id": "<uuid>",
+    "name": "Client alpha",
+    "opted_out": false,
+    "phone_e164": "+77015550099"
+   },
+   "id": "<uuid>",
+   "language": "ru",
+   "last_message": {
+    "at": "<datetime+00:00>",
+    "author": "ai",
+    "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
+   },
+   "last_message_at": "<datetime+00:00>",
+   "mode": "human",
+   "open_task_id": "<uuid>",
+   "owner_user_id": "<uuid>",
+   "status": "open",
+   "unread_count": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "events.notifications": {
+  "body": {
+   "items": [
+    {
+     "attempts": {
+      "int": 8
+     },
+     "channel": "telegram",
+     "created_at": "<datetime+00:00>",
+     "event_id": null,
+     "id": "<uuid>",
+     "kind": "admin_task",
+     "last_error": null,
+     "next_attempt_at": null,
+     "provider_ref": null,
+     "recipient": "1001",
+     "scheduled_for": null,
+     "source": "notification",
+     "status": "dead",
+     "updated_at": "<datetime+00:00>"
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "events.outbox": {
+  "body": {
+   "items": [
+    {
+     "aggregate_id": "<uuid>",
+     "aggregate_type": "payment",
+     "attempts": {
+      "int": 0
+     },
+     "channel": "outbox",
+     "created_at": "<datetime+00:00>",
+     "id": "<uuid>",
+     "kind": "payment.refunded",
+     "last_error": null,
+     "next_attempt_at": null,
+     "processed_at": null,
+     "source": "outbox",
+     "status": "pending"
+    },
+    {
+     "aggregate_id": "<uuid>",
+     "aggregate_type": "payment",
+     "attempts": {
+      "int": 0
+     },
+     "channel": "outbox",
+     "created_at": "<datetime+00:00>",
+     "id": "<uuid>",
+     "kind": "payment.confirmed",
+     "last_error": null,
+     "next_attempt_at": null,
+     "processed_at": null,
+     "source": "outbox",
+     "status": "pending"
+    },
+    {
+     "aggregate_id": "<uuid>",
+     "aggregate_type": "shift_request",
+     "attempts": {
+      "int": 0
+     },
+     "channel": "outbox",
+     "created_at": "<datetime+00:00>",
+     "id": "<uuid>",
+     "kind": "shift_request.created",
+     "last_error": null,
+     "next_attempt_at": null,
+     "processed_at": null,
+     "source": "outbox",
+     "status": "pending"
+    }
+   ],
+   "total": {
+    "int": 15
+   }
+  },
+  "status": 200
+ },
+ "events.retry_notification": {
+  "body": {
+   "attempts": {
+    "int": 0
+   },
+   "channel": "telegram",
+   "created_at": "<datetime+00:00>",
+   "event_id": null,
+   "id": "<uuid>",
+   "kind": "admin_task",
+   "last_error": null,
+   "next_attempt_at": "<datetime+00:00>",
+   "provider_ref": null,
+   "recipient": "1001",
+   "scheduled_for": null,
+   "source": "notification",
+   "status": "pending",
+   "updated_at": "<datetime+00:00>"
+  },
+  "status": 200
+ },
+ "events.retry_outbox": {
+  "body": {
+   "aggregate_id": "<uuid>",
+   "aggregate_type": "booking",
+   "attempts": {
+    "int": 0
+   },
+   "channel": "outbox",
+   "created_at": "<datetime+00:00>",
+   "id": "<uuid>",
+   "kind": "booking.created",
+   "last_error": null,
+   "next_attempt_at": null,
+   "processed_at": null,
+   "source": "outbox",
+   "status": "pending"
+  },
+  "status": 200
+ },
+ "integrations.list": {
+  "body": {
+   "items": [
+    {
+     "config": {
+      "phone_number_id": "PNID-alpha"
+     },
+     "configured": true,
+     "enabled": true,
+     "id": "<uuid>",
+     "kind": "whatsapp",
+     "last_error": null,
+     "secrets": {
+      "access_token": "••••lpha"
+     },
+     "secrets_set": [
+      "access_token"
+     ],
+     "status": "unknown",
+     "updated_at": "<datetime+00:00>"
+    },
+    {
+     "config": {},
+     "configured": true,
+     "enabled": true,
+     "id": "<uuid>",
+     "kind": "telegram",
+     "last_error": null,
+     "secrets": {
+      "bot_token": "••••lpha"
+     },
+     "secrets_set": [
+      "bot_token"
+     ],
+     "status": "unknown",
+     "updated_at": "<datetime+00:00>"
+    },
+    {
+     "config": {},
+     "configured": false,
+     "enabled": false,
+     "id": null,
+     "kind": "voice",
+     "last_error": null,
+     "secrets": {},
+     "secrets_set": [],
+     "status": "unknown",
+     "updated_at": null
+    },
+    {
+     "config": {},
+     "configured": false,
+     "enabled": false,
+     "id": null,
+     "kind": "zapier",
+     "last_error": null,
+     "secrets": {},
+     "secrets_set": [],
+     "status": "unknown",
+     "updated_at": null
+    }
+   ]
+  },
+  "status": 200
+ },
+ "integrations.put": {
+  "body": {
+   "config": {
+    "from_number": "+77000000000"
+   },
+   "configured": true,
+   "enabled": false,
+   "id": "<uuid>",
+   "kind": "voice",
+   "last_error": null,
+   "secrets": {},
+   "secrets_set": [],
+   "status": "unknown",
+   "updated_at": "<datetime+00:00>"
+  },
+  "status": 200
+ },
+ "integrations.test": {
+  "body": {
+   "detail": "bot @mock_crm_bot",
+   "ok": true
+  },
+  "status": 200
+ },
+ "knowledge.archive": {
+  "body": {
+   "author_id": "<uuid>",
+   "content": "Пароль 54321",
+   "created_at": "<datetime+00:00>",
+   "id": "<uuid>",
+   "language": "ru",
+   "section": "faq",
+   "status": "archived",
+   "test_questions": [
+    "wifi?"
+   ],
+   "title": "Wi-Fi",
+   "updated_at": "<datetime+00:00>",
+   "version": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "knowledge.create": {
+  "body": {
+   "author_id": "<uuid>",
+   "content": "Пароль 12345",
+   "created_at": "<datetime+00:00>",
+   "id": "<uuid>",
+   "language": "ru",
+   "section": "faq",
+   "status": "draft",
+   "test_questions": [
+    "wifi?"
+   ],
+   "title": "Wi-Fi",
+   "updated_at": "<datetime+00:00>",
+   "version": {
+    "int": 1
+   }
+  },
+  "status": 201
+ },
+ "knowledge.get": {
+  "body": {
+   "author_id": "<uuid>",
+   "content": "Пароль 12345",
+   "created_at": "<datetime+00:00>",
+   "id": "<uuid>",
+   "language": "ru",
+   "section": "faq",
+   "status": "draft",
+   "test_questions": [
+    "wifi?"
+   ],
+   "title": "Wi-Fi",
+   "updated_at": "<datetime+00:00>",
+   "version": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "knowledge.list": {
+  "body": {
+   "items": [
+    {
+     "author_id": "<uuid>",
+     "content": "Free parking",
+     "created_at": "<datetime+00:00>",
+     "id": "<uuid>",
+     "language": "ru",
+     "section": "faq",
+     "status": "draft",
+     "test_questions": [],
+     "title": "Parking alpha",
+     "updated_at": "<datetime+00:00>",
+     "version": {
+      "int": 1
+     }
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "knowledge.patch": {
+  "body": {
+   "author_id": "<uuid>",
+   "content": "Пароль 54321",
+   "created_at": "<datetime+00:00>",
+   "id": "<uuid>",
+   "language": "ru",
+   "section": "faq",
+   "status": "draft",
+   "test_questions": [
+    "wifi?"
+   ],
+   "title": "Wi-Fi",
+   "updated_at": "<datetime+00:00>",
+   "version": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "knowledge.publish": {
+  "body": {
+   "author_id": "<uuid>",
+   "content": "Пароль 54321",
+   "created_at": "<datetime+00:00>",
+   "id": "<uuid>",
+   "language": "ru",
+   "section": "faq",
+   "status": "published",
+   "test_questions": [
+    "wifi?"
+   ],
+   "title": "Wi-Fi",
+   "updated_at": "<datetime+00:00>",
+   "version": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "knowledge.test": {
+  "body": {
+   "escalated": false,
+   "language": "ru",
+   "reply": "«Мужская стрижка» — 5000 ₸, длительность 60 мин. Хотите записаться?",
+   "tool_calls": [
+    {
+     "error": null,
+     "input": {},
+     "name": "list_services",
+     "ok": true,
+     "result": {}
+    },
+    {
+     "error": "NO_CLIENT",
+     "input": {
+      "service_id": "<uuid>",
+      "stage": "info_requested"
+     },
+     "name": "update_lead",
+     "ok": false,
+     "result": null
+    },
+    {
+     "error": "NO_CLIENT",
+     "input": {
+      "tag": "спросил цену"
+     },
+     "name": "add_tag",
+     "ok": false,
+     "result": null
+    }
+   ],
+   "used_articles": []
+  },
+  "status": 200
+ },
+ "messages.list": {
+  "body": {
+   "items": [
+    {
+     "author": "client",
+     "author_user_id": null,
+     "direction": "in",
+     "error": null,
+     "id": "<uuid>",
+     "is_internal_note": false,
+     "language": "ru",
+     "media_url": null,
+     "message_type": "text",
+     "provider_status": "received",
+     "received_at": "<datetime+00:00>",
+     "text": "Здравствуйте"
+    },
+    {
+     "author": "ai",
+     "author_user_id": null,
+     "direction": "out",
+     "error": null,
+     "id": "<uuid>",
+     "is_internal_note": false,
+     "language": "ru",
+     "media_url": null,
+     "message_type": "text",
+     "provider_status": "sent",
+     "received_at": "<datetime+00:00>",
+     "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
+    }
+   ],
+   "total": {
+    "int": 2
+   }
+  },
+  "status": 200
+ },
+ "messages.post": {
+  "body": {
+   "author": "human",
+   "author_user_id": "<uuid>",
+   "direction": "out",
+   "error": null,
+   "id": "<uuid>",
+   "is_internal_note": true,
+   "language": null,
+   "media_url": null,
+   "message_type": "note",
+   "provider_status": "internal",
+   "received_at": "<datetime+00:00>",
+   "text": "Note"
+  },
+  "status": 201
+ },
+ "payments.cancel": {
+  "body": {
+   "amount": "500.00",
+   "booking_id": "<uuid>",
+   "branch_id": "<uuid>",
+   "comment": "",
+   "confirmation_source": "admin",
+   "contact_id": "<uuid>",
+   "created_at": "<datetime+00:00>",
+   "created_by": "<uuid>",
+   "currency": "KZT",
+   "id": "<uuid>",
+   "kind": "payment",
+   "method": "card",
+   "paid_at": "<datetime+00:00>",
+   "refund_of_id": null,
+   "refunded_amount": "0",
+   "staff_id": "<uuid>",
+   "status": "cancelled",
+   "transaction_ref": null,
+   "visit_id": null
+  },
+  "status": 200
+ },
+ "payments.create": {
+  "body": {
+   "amount": "500.00",
+   "booking_id": "<uuid>",
+   "branch_id": "<uuid>",
+   "comment": "",
+   "confirmation_source": "admin",
+   "contact_id": "<uuid>",
+   "created_at": "<datetime+00:00>",
+   "created_by": "<uuid>",
+   "currency": "KZT",
+   "id": "<uuid>",
+   "kind": "payment",
+   "method": "card",
+   "paid_at": "<datetime+00:00>",
+   "refund_of_id": null,
+   "refunded_amount": "0",
+   "staff_id": "<uuid>",
+   "status": "confirmed",
+   "transaction_ref": null,
+   "visit_id": null
+  },
+  "status": 201
+ },
+ "payments.get": {
+  "body": {
+   "amount": "1000.00",
+   "booking_id": "<uuid>",
+   "branch_id": "<uuid>",
+   "comment": "",
+   "confirmation_source": "admin",
+   "contact_id": "<uuid>",
+   "created_at": "<datetime+00:00>",
+   "created_by": "<uuid>",
+   "currency": "KZT",
+   "id": "<uuid>",
+   "kind": "payment",
+   "method": "cash",
+   "paid_at": "<datetime+00:00>",
+   "refund_of_id": null,
+   "refunded_amount": "0",
+   "staff_id": "<uuid>",
+   "status": "confirmed",
+   "transaction_ref": null,
+   "visit_id": null
+  },
+  "status": 200
+ },
+ "payments.list": {
+  "body": {
+   "items": [
+    {
+     "amount": "1000.00",
+     "booking_id": "<uuid>",
+     "branch_id": "<uuid>",
+     "comment": "",
+     "confirmation_source": "admin",
+     "contact_id": "<uuid>",
+     "created_at": "<datetime+00:00>",
+     "created_by": "<uuid>",
+     "currency": "KZT",
+     "id": "<uuid>",
+     "kind": "payment",
+     "method": "cash",
+     "paid_at": "<datetime+00:00>",
+     "refund_of_id": null,
+     "refunded_amount": "0",
+     "staff_id": "<uuid>",
+     "status": "confirmed",
+     "transaction_ref": null,
+     "visit_id": null
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "payments.refund": {
+  "body": {
+   "amount": "100.00",
+   "booking_id": "<uuid>",
+   "branch_id": "<uuid>",
+   "comment": "r",
+   "confirmation_source": "admin",
+   "contact_id": "<uuid>",
+   "created_at": "<datetime+00:00>",
+   "created_by": "<uuid>",
+   "currency": "KZT",
+   "id": "<uuid>",
+   "kind": "refund",
+   "method": "cash",
+   "paid_at": "<datetime+00:00>",
+   "refund_of_id": "<uuid>",
+   "refunded_amount": null,
+   "staff_id": "<uuid>",
+   "status": "confirmed",
+   "transaction_ref": null,
+   "visit_id": null
+  },
+  "status": 201
+ },
+ "reports.overview.admin": {
+  "body": {
+   "bookings_by_day": [
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    }
+   ],
+   "cancellations_by_day": [
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    }
+   ],
+   "currency": "KZT",
+   "date_from": "<date>",
+   "date_to": "<date>",
+   "funnel": [
+    {
+     "count": {
+      "int": 1
+     },
+     "stage": "new"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "info_requested"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "qualified"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "booking_pending"
+    },
+    {
+     "count": {
+      "int": 2
+     },
+     "stage": "booked"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "visited"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "repeat"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "lost"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "cancelled"
+    }
+   ],
+   "kpi": {
+    "ai_resolution_rate": {
+     "float": 0.0
+    },
+    "avg_check": null,
+    "bookings": {
+     "int": 0
+    },
+    "cancellations": {
+     "int": 0
+    },
+    "conversion_to_booking": {
+     "float": 100.0
+    },
+    "conversion_to_visit": {
+     "float": 0.0
+    },
+    "net_revenue": null,
+    "new_leads": {
+     "int": 3
+    },
+    "no_show_rate": {
+     "float": 0.0
+    },
+    "no_shows": {
+     "int": 0
+    },
+    "open_tasks": {
+     "int": 1
+    },
+    "refunds": null,
+    "revenue": null,
+    "unpaid_completed": {
+     "int": 0
+    },
+    "visits": {
+     "int": 0
+    }
+   },
+   "lead_sources": [
+    {
+     "count": {
+      "int": 2
+     },
+     "source": "whatsapp"
+    },
+    {
+     "count": {
+      "int": 1
+     },
+     "source": "manual"
+    }
+   ],
+   "load_by_hour": [
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 1
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 2
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 3
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 4
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 5
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 6
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 7
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 8
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 9
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 10
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 11
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 12
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 13
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 14
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 15
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 16
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 17
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 18
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 19
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 20
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 21
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 22
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 23
+     }
+    }
+   ],
+   "revenue_by_day": [
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    },
+    {
+     "amount": null,
+     "date": "<date>"
+    }
+   ],
+   "top_services": [
+    {
+     "count": {
+      "int": 0
+     },
+     "revenue": null,
+     "service_id": "<uuid>",
+     "title": "Мужская стрижка"
+    }
+   ],
+   "top_staff": [
+    {
+     "name": "Арман",
+     "revenue": null,
+     "staff_id": "<uuid>",
+     "utilization": {
+      "float": 0.0
+     },
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "name": "Ерлан",
+     "revenue": null,
+     "staff_id": "<uuid>",
+     "utilization": {
+      "float": 0.0
+     },
+     "visits": {
+      "int": 0
+     }
+    }
+   ]
+  },
+  "status": 200
+ },
+ "reports.overview.owner": {
+  "body": {
+   "bookings_by_day": [
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "date": "<date>",
+     "visits": {
+      "int": 0
+     }
+    }
+   ],
+   "cancellations_by_day": [
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    },
+    {
+     "cancelled": {
+      "int": 0
+     },
+     "date": "<date>",
+     "no_show": {
+      "int": 0
+     }
+    }
+   ],
+   "currency": "KZT",
+   "date_from": "<date>",
+   "date_to": "<date>",
+   "funnel": [
+    {
+     "count": {
+      "int": 1
+     },
+     "stage": "new"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "info_requested"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "qualified"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "booking_pending"
+    },
+    {
+     "count": {
+      "int": 2
+     },
+     "stage": "booked"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "visited"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "repeat"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "lost"
+    },
+    {
+     "count": {
+      "int": 0
+     },
+     "stage": "cancelled"
+    }
+   ],
+   "kpi": {
+    "ai_resolution_rate": {
+     "float": 0.0
+    },
+    "avg_check": "900.00",
+    "bookings": {
+     "int": 0
+    },
+    "cancellations": {
+     "int": 0
+    },
+    "conversion_to_booking": {
+     "float": 100.0
+    },
+    "conversion_to_visit": {
+     "float": 0.0
+    },
+    "net_revenue": "900.00",
+    "new_leads": {
+     "int": 3
+    },
+    "no_show_rate": {
+     "float": 0.0
+    },
+    "no_shows": {
+     "int": 0
+    },
+    "open_tasks": {
+     "int": 1
+    },
+    "refunds": "100.00",
+    "revenue": "1000.00",
+    "unpaid_completed": {
+     "int": 0
+    },
+    "visits": {
+     "int": 0
+    }
+   },
+   "lead_sources": [
+    {
+     "count": {
+      "int": 2
+     },
+     "source": "whatsapp"
+    },
+    {
+     "count": {
+      "int": 1
+     },
+     "source": "manual"
+    }
+   ],
+   "load_by_hour": [
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 0
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 1
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 2
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 3
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 4
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 5
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 6
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 7
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 8
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 9
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 10
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 11
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 12
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 13
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 14
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 15
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 16
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 17
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 18
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 19
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 20
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 21
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 22
+     }
+    },
+    {
+     "bookings": {
+      "int": 0
+     },
+     "hour": {
+      "int": 23
+     }
+    }
+   ],
+   "revenue_by_day": [
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "0.00",
+     "date": "<date>"
+    },
+    {
+     "amount": "900.00",
+     "date": "<date>"
+    }
+   ],
+   "top_services": [
+    {
+     "count": {
+      "int": 0
+     },
+     "revenue": "900.00",
+     "service_id": "<uuid>",
+     "title": "Мужская стрижка"
+    }
+   ],
+   "top_staff": [
+    {
+     "name": "Арман",
+     "revenue": "900.00",
+     "staff_id": "<uuid>",
+     "utilization": {
+      "float": 0.0
+     },
+     "visits": {
+      "int": 0
+     }
+    },
+    {
+     "name": "Ерлан",
+     "revenue": "0.00",
+     "staff_id": "<uuid>",
+     "utilization": {
+      "float": 0.0
+     },
+     "visits": {
+      "int": 0
+     }
+    }
+   ]
+  },
+  "status": 200
+ },
+ "tasks.ack": {
+  "body": {
+   "ack_at": "<datetimeZ>",
+   "add_to_knowledge": false,
+   "answer": "",
+   "assignee": {
+    "full_name": "a-owner",
+    "id": "<uuid>"
+   },
+   "branch_id": null,
+   "contact": {
+    "id": "<uuid>",
+    "name": "Нурлан",
+    "phone_e164": "+77071234567"
+   },
+   "conversation_id": null,
+   "created_at": "<datetimeZ>",
+   "escalation_level": {
+    "int": 0
+   },
+   "id": "<uuid>",
+   "kind": "question",
+   "next_escalation_at": null,
+   "number": {
+    "int": 2
+   },
+   "payload": {
+    "created_by": "<uuid>"
+   },
+   "priority": "normal",
+   "question": "Парковка есть?",
+   "resolved_at": null,
+   "sla_due_at": null,
+   "status": "acked"
+  },
+  "status": 200
+ },
+ "tasks.create": {
+  "body": {
+   "ack_at": null,
+   "add_to_knowledge": false,
+   "answer": "",
+   "assignee": null,
+   "branch_id": null,
+   "contact": {
+    "id": "<uuid>",
+    "name": "Нурлан",
+    "phone_e164": "+77071234567"
+   },
+   "conversation_id": null,
+   "created_at": "<datetimeZ>",
+   "escalation_level": {
+    "int": 0
+   },
+   "id": "<uuid>",
+   "kind": "question",
+   "next_escalation_at": "<datetimeZ>",
+   "number": {
+    "int": 2
+   },
+   "payload": {
+    "created_by": "<uuid>"
+   },
+   "priority": "normal",
+   "question": "Парковка есть?",
+   "resolved_at": null,
+   "sla_due_at": null,
+   "status": "open"
+  },
+  "status": 201
+ },
+ "tasks.get": {
+  "body": {
+   "ack_at": null,
+   "add_to_knowledge": false,
+   "answer": "",
+   "assignee": null,
+   "branch_id": null,
+   "contact": {
+    "id": "<uuid>",
+    "name": "Нурлан",
+    "phone_e164": "+77071234567"
+   },
+   "conversation_id": null,
+   "created_at": "<datetimeZ>",
+   "escalation_level": {
+    "int": 0
+   },
+   "id": "<uuid>",
+   "kind": "question",
+   "next_escalation_at": "<datetimeZ>",
+   "number": {
+    "int": 2
+   },
+   "payload": {
+    "created_by": "<uuid>"
+   },
+   "priority": "normal",
+   "question": "Парковка есть?",
+   "resolved_at": null,
+   "sla_due_at": null,
+   "status": "open"
+  },
+  "status": 200
+ },
+ "tasks.list": {
+  "body": {
+   "items": [
+    {
+     "ack_at": null,
+     "add_to_knowledge": false,
+     "answer": "",
+     "assignee": null,
+     "branch_id": null,
+     "contact": {
+      "id": "<uuid>",
+      "name": "Client alpha",
+      "phone_e164": "+77015550099"
+     },
+     "conversation_id": "<uuid>",
+     "created_at": "<datetimeZ>",
+     "escalation_level": {
+      "int": 0
+     },
+     "id": "<uuid>",
+     "kind": "question",
+     "next_escalation_at": "<datetimeZ>",
+     "number": {
+      "int": 1
+     },
+     "payload": {
+      "created_by": "<uuid>"
+     },
+     "priority": "normal",
+     "question": "question alpha",
+     "resolved_at": null,
+     "sla_due_at": "<datetimeZ>",
+     "status": "open"
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "tasks.resolve": {
+  "body": {
+   "ack_at": "<datetimeZ>",
+   "add_to_knowledge": false,
+   "answer": "Да",
+   "assignee": {
+    "full_name": "a-owner",
+    "id": "<uuid>"
+   },
+   "branch_id": null,
+   "contact": {
+    "id": "<uuid>",
+    "name": "Нурлан",
+    "phone_e164": "+77071234567"
+   },
+   "conversation_id": null,
+   "created_at": "<datetimeZ>",
+   "escalation_level": {
+    "int": 0
+   },
+   "id": "<uuid>",
+   "kind": "question",
+   "next_escalation_at": null,
+   "number": {
+    "int": 2
+   },
+   "payload": {
+    "created_by": "<uuid>"
+   },
+   "priority": "normal",
+   "question": "Парковка есть?",
+   "resolved_at": "<datetimeZ>",
+   "sla_due_at": null,
+   "status": "resolved"
+  },
+  "status": 200
+ },
+ "webhooks.create": {
+  "body": {
+   "created_at": "<datetime+00:00>",
+   "enabled": true,
+   "events": [
+    "booking.created",
+    "payment.confirmed"
+   ],
+   "id": "<uuid>",
+   "include_pii": false,
+   "secret": "<secret>",
+   "url": "https://hooks.example.com/s"
+  },
+  "status": 201
+ },
+ "webhooks.delete": {
+  "body": null,
+  "status": 204
+ },
+ "webhooks.list": {
+  "body": {
+   "available_events": [
+    "admin_task.acked",
+    "admin_task.created",
+    "admin_task.resolved",
+    "booking.cancelled",
+    "booking.confirmed",
+    "booking.created",
+    "booking.rescheduled",
+    "booking.status_changed",
+    "lead.created",
+    "lead.status_changed",
+    "message.delivery_failed",
+    "payment.cancelled",
+    "payment.confirmed",
+    "payment.refunded",
+    "shift_request.created",
+    "shift_request.decided",
+    "staff.schedule_changed"
+   ],
+   "items": [
+    {
+     "created_at": "<datetime+00:00>",
+     "enabled": true,
+     "events": [
+      "booking.created"
+     ],
+     "id": "<uuid>",
+     "include_pii": false,
+     "url": "https://hooks.example.com/alpha"
+    }
+   ],
+   "total": {
+    "int": 1
+   }
+  },
+  "status": 200
+ },
+ "webhooks.patch": {
+  "body": {
+   "created_at": "<datetime+00:00>",
+   "enabled": true,
+   "events": [
+    "booking.created",
+    "payment.confirmed"
+   ],
+   "id": "<uuid>",
+   "include_pii": true,
+   "url": "https://hooks.example.com/s"
+  },
+  "status": 200
+ }
+}

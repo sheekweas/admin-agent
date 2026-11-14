@@ -13,6 +13,15 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
 from app.channels.base import NormalizedMessage
+from app.api.schemas import (
+    ConversationDetail,
+    ConversationList,
+    ConversationOut,
+    MessageList,
+    MessageOut,
+    SimulateOut,
+    error_responses,
+)
 from app.config import get_settings
 from app.db import get_db
 from app.deps import AuthContext, require
@@ -108,7 +117,7 @@ def _items(db: Session, convs: list[Conversation]) -> list[dict[str, Any]]:
     return out
 
 
-@router.get("")
+@router.get("", response_model=ConversationList)
 def list_conversations(
     *,
     mode: str | None = None,
@@ -151,13 +160,13 @@ def list_conversations(
     return {"items": _items(db, list(rows)), "total": total}
 
 
-@router.get("/{conversation_id}")
+@router.get("/{conversation_id}", response_model=ConversationDetail, responses=error_responses(404))
 def get_conversation(conversation_id: uuid.UUID, ctx: ConvRead, db: DB) -> dict[str, Any]:
     conv = _get(db, ctx, conversation_id)
     return {**_items(db, [conv])[0], "state": conv.state or {}}
 
 
-@router.get("/{conversation_id}/messages")
+@router.get("/{conversation_id}/messages", response_model=MessageList, responses=error_responses(404))
 def list_messages(
     conversation_id: uuid.UUID, ctx: ConvRead, db: DB, limit: Annotated[int, Query(ge=1, le=1000)] = 200
 ) -> dict[str, Any]:
@@ -169,7 +178,12 @@ def list_messages(
     return {"items": [messaging.message_to_dict(m) for m in reversed(rows)], "total": total}
 
 
-@router.post("/{conversation_id}/messages", status_code=201)
+@router.post(
+    "/{conversation_id}/messages",
+    status_code=201,
+    response_model=MessageOut,
+    responses=error_responses(404, 409),
+)
 def post_message(conversation_id: uuid.UUID, body: MessageIn, ctx: ConvWrite, db: DB) -> dict[str, Any]:
     conv = _get(db, ctx, conversation_id)
     msg = messaging.human_reply(
@@ -187,26 +201,26 @@ def _action(conversation_id: uuid.UUID, ctx: AuthContext, db: Session, fn: Any) 
     return _items(db, [conv])[0]
 
 
-@router.post("/{conversation_id}/takeover")
+@router.post("/{conversation_id}/takeover", response_model=ConversationOut, responses=error_responses(404))
 def takeover(conversation_id: uuid.UUID, ctx: ConvWrite, db: DB) -> dict[str, Any]:
     return _action(
         conversation_id, ctx, db, lambda c: messaging.takeover(db, ctx.tenant_id, c.id, ctx.user.id)
     )
 
 
-@router.post("/{conversation_id}/release")
+@router.post("/{conversation_id}/release", response_model=ConversationOut, responses=error_responses(404))
 def release(conversation_id: uuid.UUID, ctx: ConvWrite, db: DB) -> dict[str, Any]:
     return _action(
         conversation_id, ctx, db, lambda c: messaging.release(db, ctx.tenant_id, c.id, ctx.user.id)
     )
 
 
-@router.post("/{conversation_id}/read")
+@router.post("/{conversation_id}/read", response_model=ConversationOut, responses=error_responses(404))
 def mark_read(conversation_id: uuid.UUID, ctx: ConvRead, db: DB) -> dict[str, Any]:
     return _action(conversation_id, ctx, db, lambda c: messaging.mark_read(db, ctx.tenant_id, c.id))
 
 
-@router.post("/simulate")
+@router.post("/simulate", response_model=SimulateOut, responses=error_responses(404, 422))
 def simulate(body: SimulateIn, ctx: ConvWrite, db: DB) -> dict[str, Any]:
     """Dev/demo only: inject an inbound WhatsApp message as if it came from `phone` (mock mode only)."""
     if get_settings().whatsapp_mode != "mock":

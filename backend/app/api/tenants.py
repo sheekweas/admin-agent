@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import AuthContext, get_auth, require
-from app.models import Membership, Tenant, User
-from app.security import hash_password
+from app.models import Branch, Membership, Tenant, User
+from app.security import hash_password, verify_password
 from app.services.audit import audit
 from app.services.common import DomainError, get_or_404
 from app.services.tenant_settings import DEFAULT_SETTINGS, merged_settings
@@ -133,10 +133,37 @@ def _member_out(m: Membership) -> MemberOut:
     )
 
 
+def _branch_scope(db: Session, ctx: AuthContext, ids: list[uuid.UUID]) -> list[str]:
+    """Branch scopes may only name this organization's branches."""
+    if ids and len(
+        set(db.scalars(select(Branch.id).where(Branch.tenant_id == ctx.tenant_id, Branch.id.in_(ids))))
+    ) != len(set(ids)):
+        raise DomainError(422, "UNKNOWN_BRANCH", "Some branch ids do not exist")
+    return [str(b) for b in ids]
+
+
+def _shared_with_other_tenants(db: Session, user_id: uuid.UUID, tenant_id: uuid.UUID) -> bool:
+    return (
+        db.scalar(
+            select(Membership.id)
+            .where(Membership.user_id == user_id, Membership.tenant_id != tenant_id)
+            .limit(1)
+        )
+        is not None
+    )
+
+
 @router.get("/team", response_model=list[MemberOut])
 def list_team(ctx: AuthContext = Depends(require("staff.read")), db: Session = Depends(get_db)):
     rows = db.scalars(select(Membership).where(Membership.tenant_id == ctx.tenant_id)).all()
-    return [_member_out(m) for m in rows]
+    out = [_member_out(m) for m in rows]
+    if not ctx.can("tasks.write"):
+        # Staff/analysts see who is on the team, but not colleagues' phones / Telegram ids (spec §20.1).
+        for item in out:
+            if item.user_id != ctx.user.id:
+                item.phone_e164 = None
+                item.telegram_chat_id = None
+    return out
 
 
 @router.post("/team", response_model=MemberOut, status_code=201)
@@ -159,11 +186,17 @@ def add_member(
         select(Membership).where(Membership.user_id == user.id, Membership.tenant_id == ctx.tenant_id)
     ):
         raise DomainError(409, "ALREADY_MEMBER", "User is already a member")
+    elif not verify_password(body.password, user.password_hash):
+        # An existing account (possibly of another organization) is only linked when the caller knows its
+        # password: otherwise anyone could enrol a stranger's account and read/rewrite their profile.
+        raise DomainError(
+            409, "USER_EXISTS", "An account with this e-mail exists; enter that account's password to add it"
+        )
     m = Membership(
         tenant_id=ctx.tenant_id,
         user_id=user.id,
         role=body.role,
-        branch_scope=[str(b) for b in body.branch_scope],
+        branch_scope=_branch_scope(db, ctx, body.branch_scope),
         is_escalation_primary=body.is_escalation_primary,
         is_escalation_backup=body.is_escalation_backup,
     )
@@ -193,11 +226,25 @@ def patch_member(
 ):
     m = get_or_404(db, Membership, membership_id, ctx.tenant_id)
     data = body.model_dump(exclude_none=True)
+    profile = {
+        k: data.pop(k)
+        for k in ("full_name", "phone_e164", "telegram_chat_id")
+        if k in data and data[k] != getattr(m.user, k)
+    }
+    if profile and m.user_id != ctx.user.id and _shared_with_other_tenants(db, m.user_id, ctx.tenant_id):
+        # The user profile (phone, Telegram chat id) is global: another organization's owner must not be able
+        # to redirect this person's escalation calls/messages.
+        raise DomainError(
+            409,
+            "SHARED_USER_PROFILE",
+            "This user also belongs to another organization; they edit it themselves",
+        )
+    for k, v in profile.items():
+        setattr(m.user, k, v)
     for k in ("full_name", "phone_e164", "telegram_chat_id"):
-        if k in data:
-            setattr(m.user, k, data.pop(k))
+        data.pop(k, None)
     if "branch_scope" in data:
-        data["branch_scope"] = [str(b) for b in data["branch_scope"]]
+        data["branch_scope"] = _branch_scope(db, ctx, data["branch_scope"])
     for k, v in data.items():
         setattr(m, k, v)
     audit(

@@ -19,6 +19,17 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app.deps import AuthContext, require
+from app.api.schemas import (
+    DeliveryEventList,
+    DeliveryEventOut,
+    IntegrationList,
+    IntegrationOut,
+    IntegrationTestOut,
+    WebhookSubscriptionCreated,
+    WebhookSubscriptionList,
+    WebhookSubscriptionOut,
+    error_responses,
+)
 from app.models import Integration, Notification, OutboxEvent, WebhookSubscription
 from app.security import encrypt_secret, random_token
 from app.services import webhooks_out
@@ -88,14 +99,20 @@ def _telegram_webhook(db: Session, tenant_id: uuid.UUID, integ: Integration) -> 
         integ.status, integ.last_error = "error", f"setWebhook: {exc}"[:500]
 
 
-@router.get("")
+@router.get("", response_model=IntegrationList)
 def list_integrations(
     ctx: AuthContext = Depends(require("integrations.read")), db: Session = Depends(get_db)
 ):
     return {"items": [public_config(get_integration(db, ctx.tenant_id, k), k) for k in INTEGRATION_KINDS]}
 
 
-@router.put("/{kind}")
+@router.put(
+    "/{kind}",
+    response_model=IntegrationOut,
+    responses=error_responses(
+        404, 409, e409="INTEGRATION_IN_USE: the WhatsApp number belongs to another organization"
+    ),
+)
 def put_integration(
     kind: str,
     body: IntegrationIn,
@@ -159,7 +176,7 @@ def put_integration(
     return public_config(integ, kind)
 
 
-@router.post("/{kind}/test")
+@router.post("/{kind}/test", response_model=IntegrationTestOut, responses=error_responses(404))
 def test_integration(
     kind: str, ctx: AuthContext = Depends(require("integrations.write")), db: Session = Depends(get_db)
 ):
@@ -253,7 +270,7 @@ def _check_events(events: list[str]) -> list[str]:
     return sorted(set(events))
 
 
-@router.get("/webhooks")
+@router.get("/webhooks", response_model=WebhookSubscriptionList)
 def list_webhooks(ctx: AuthContext = Depends(require("integrations.read")), db: Session = Depends(get_db)):
     subs = db.scalars(
         select(WebhookSubscription)
@@ -267,7 +284,9 @@ def list_webhooks(ctx: AuthContext = Depends(require("integrations.read")), db: 
     }
 
 
-@router.post("/webhooks", status_code=201)
+@router.post(
+    "/webhooks", status_code=201, response_model=WebhookSubscriptionCreated, responses=error_responses(422)
+)
 def create_webhook(
     body: SubscriptionIn,
     ctx: AuthContext = Depends(require("integrations.write")),
@@ -303,7 +322,9 @@ def create_webhook(
     return _sub_out(sub, secret)
 
 
-@router.patch("/webhooks/{sub_id}")
+@router.patch(
+    "/webhooks/{sub_id}", response_model=WebhookSubscriptionOut, responses=error_responses(404, 422)
+)
 def patch_webhook(
     sub_id: uuid.UUID,
     body: SubscriptionPatch,
@@ -332,7 +353,7 @@ def patch_webhook(
     return _sub_out(sub)
 
 
-@router.delete("/webhooks/{sub_id}", status_code=204)
+@router.delete("/webhooks/{sub_id}", status_code=204, responses=error_responses(404))
 def delete_webhook(
     sub_id: uuid.UUID,
     ctx: AuthContext = Depends(require("integrations.write")),
@@ -400,7 +421,7 @@ def _outbox_out(e: OutboxEvent) -> dict[str, Any]:
     }
 
 
-@router.get("/events")
+@router.get("/events", response_model=DeliveryEventList)
 def list_events(
     status: str | None = None,
     channel: str | None = None,
@@ -432,7 +453,11 @@ def list_events(
     return {"items": [_notification_out(n) for n in rows], "total": total}
 
 
-@router.post("/events/{event_id}/retry")
+@router.post(
+    "/events/{event_id}/retry",
+    response_model=DeliveryEventOut,
+    responses=error_responses(404, 409, e409="ALREADY_SENT"),
+)
 def retry(
     event_id: uuid.UUID,
     ctx: AuthContext = Depends(require("integrations.read")),

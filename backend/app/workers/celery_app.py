@@ -8,7 +8,11 @@ from __future__ import annotations
 
 from celery import Celery
 
-from app.config import get_settings
+from app.config import get_settings, validate_settings
+from app.logging_setup import install_redaction
+
+validate_settings(get_settings())
+install_redaction()
 
 celery_app = Celery("ai_crm", broker=get_settings().redis_url, include=["app.workers.tasks"])
 celery_app.conf.update(

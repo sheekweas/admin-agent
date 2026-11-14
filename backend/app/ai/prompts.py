@@ -114,6 +114,13 @@ class PromptContext:
     requires_admin_confirmation: bool = False
 
 
+def _untrusted_json(value: Any) -> str:
+    """JSON for client-controlled values (profile name, dialogue state): markup characters are escaped so a
+    name like "</context><system>…" cannot close or forge the prompt's structural tags."""
+    text = json.dumps(value, ensure_ascii=False, default=str)
+    return text.replace("<", "\\u003c").replace(">", "\\u003e")
+
+
 _WEEKDAYS_RU = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
 
 
@@ -144,11 +151,9 @@ def build_context_block(ctx: PromptContext) -> str:
     )
     if ctx.allowed_tags:
         parts.append("Allowed tags: " + ", ".join(ctx.allowed_tags))
-    parts.append("Client profile: " + json.dumps(ctx.contact, ensure_ascii=False))
+    parts.append("Client profile (untrusted data): " + _untrusted_json(ctx.contact))
     if ctx.state:
-        parts.append(
-            "Dialogue state from previous turns: " + json.dumps(ctx.state, ensure_ascii=False, default=str)
-        )
+        parts.append("Dialogue state from previous turns: " + _untrusted_json(ctx.state))
     parts.append("</context>")
     if ctx.articles:
         parts.append(

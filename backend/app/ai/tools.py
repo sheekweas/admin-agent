@@ -676,14 +676,38 @@ _REGISTRY: dict[str, tuple[type[_In], Callable[[ToolContext, Any], dict[str, Any
 assert set(_REGISTRY) == {t["name"] for t in TOOL_DEFINITIONS}
 
 
+AUDIT_MAX_STR = 500
+AUDIT_MAX_KEYS = 20
+
+
+def _audit_value(v: Any, depth: int = 0) -> Any:
+    """Bounded copy of model-supplied input for the AIRun audit (a hostile model must not bloat it)."""
+    if isinstance(v, str):
+        return v if len(v) <= AUDIT_MAX_STR else v[:AUDIT_MAX_STR] + f"…[+{len(v) - AUDIT_MAX_STR}]"
+    if isinstance(v, bool | int | float) or v is None:
+        return v
+    if depth >= 3:
+        return "…"
+    if isinstance(v, dict):
+        items = list(v.items())[:AUDIT_MAX_KEYS]
+        return {str(k)[:100]: _audit_value(x, depth + 1) for k, x in items}
+    if isinstance(v, list | tuple):
+        return [_audit_value(x, depth + 1) for x in list(v)[:AUDIT_MAX_KEYS]]
+    return _audit_value(repr(v), depth)
+
+
 def execute_tool(ctx: ToolContext, name: str, raw_input: Any) -> dict[str, Any]:
     """Validate and run one tool call. Always returns a JSON-serialisable dict with "ok"."""
     started = time.perf_counter()
-    entry: dict[str, Any] = {"name": name, "input": raw_input if isinstance(raw_input, dict) else {}}
+    name = str(name)[:100]
+    entry: dict[str, Any] = {
+        "name": name,
+        "input": _audit_value(raw_input) if isinstance(raw_input, dict) else {},
+    }
     result: dict[str, Any]
     spec = _REGISTRY.get(name)
     if spec is None:
-        result = {"ok": False, "error": "UNKNOWN_TOOL", "message": f"Unknown tool {name!r}."}
+        result = {"ok": False, "error": "UNKNOWN_TOOL", "message": "Unknown tool."}
     else:
         model, fn = spec
         try:
@@ -692,7 +716,9 @@ def execute_tool(ctx: ToolContext, name: str, raw_input: Any) -> dict[str, Any]:
             result = {
                 "ok": False,
                 "error": "INVALID_INPUT",
-                "message": "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()),
+                "message": "; ".join(
+                    f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:10]
+                )[:1000],
             }
         else:
             sp = ctx.db.begin_nested()

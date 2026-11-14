@@ -72,8 +72,13 @@ def _booking_alert(db: Session, ev: OutboxEvent, booking: Booking, kind: str, ke
 
 
 def _client_confirmation(db: Session, ev: OutboxEvent, booking: Booking) -> None:
-    # Bookings made by the AI agent were already confirmed in the chat itself (ТЗ §26.1).
-    if booking.source == "ai_agent":
+    # Changes made by the AI agent were already confirmed in the chat itself (ТЗ §26.1). A reschedule keeps
+    # the original source, so for it the actor decides: an admin moving an AI booking must notify the client.
+    actor = (ev.payload or {}).get("actor_type")
+    by_ai = (
+        actor == "ai" if ev.event_type == "booking.rescheduled" and actor else booking.source == "ai_agent"
+    )
+    if by_ai:
         return
     nt.queue_client_notification(
         db,

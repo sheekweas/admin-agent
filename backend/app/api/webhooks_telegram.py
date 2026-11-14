@@ -17,6 +17,7 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.schemas import OkOut
 from app.channels.telegram import TelegramClient, TelegramError, client_for_tenant
 from app.db import get_db
 from app.models import AdminTask, Membership, Notification, Tenant, User
@@ -65,7 +66,11 @@ def _parse_uuid(v: str) -> uuid.UUID | None:
         return None
 
 
-@router.post("/{tenant_id}")
+@router.post(
+    "/{tenant_id}",
+    response_model=OkOut,
+    responses={401: {"description": "Bad X-Telegram-Bot-Api-Secret-Token"}},
+)
 def telegram_webhook(
     tenant_id: uuid.UUID,
     update: dict = Body(...),

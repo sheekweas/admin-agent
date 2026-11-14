@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.schemas import AuditList
 from app.db import get_db
 from app.deps import AuthContext, require
 from app.models import AuditLog
@@ -17,7 +18,7 @@ from app.services.reports import default_tz_name
 router = APIRouter()
 
 
-@router.get("")
+@router.get("", response_model=AuditList)
 def list_audit(
     entity: str | None = None,
     entity_id: str | None = None,

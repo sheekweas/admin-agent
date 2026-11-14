@@ -1,7 +1,11 @@
+.npm-cache/
 node_modules/
 .next/
-.npm-cache/
 coverage/
-*.tsbuildinfo
 .env.local
 qa-screenshots/
+.playwright/
+playwright-report/
+test-results/
+test-results-*/
+*.tsbuildinfo

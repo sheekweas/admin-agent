@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.models import (
     AdminTask,
     Booking,
+    Branch,
     Call,
     Contact,
     ContactChannel,
@@ -180,6 +181,8 @@ def create_contact(
         raise DomainError(
             409, "CONTACT_EXISTS", "Contact with this phone already exists", existing_id=str(existing.id)
         )
+    if branch_id is not None:
+        get_or_404(db, Branch, branch_id, tenant_id)  # no cross-tenant references
     contact = Contact(
         tenant_id=tenant_id,
         name=name.strip()[:200],

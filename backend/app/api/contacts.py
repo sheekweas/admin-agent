@@ -16,10 +16,10 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import AuthContext, require
-from app.models import Contact, Membership
+from app.models import Branch, Contact, Membership
 from app.services import crm
 from app.services.audit import audit
-from app.services.common import DomainError, mask_phone, normalize_phone
+from app.services.common import DomainError, get_or_404, mask_phone, normalize_phone
 
 router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
@@ -175,6 +175,8 @@ def list_contacts(
 def create_contact(
     ctx: Annotated[AuthContext, Depends(require("contacts.write"))], db: DbSession, body: ContactIn
 ):
+    if body.branch_id is not None and not ctx.branch_allowed(body.branch_id):
+        raise DomainError(403, "FORBIDDEN", "No access to this branch")
     contact = crm.create_contact(
         db,
         ctx.tenant_id,
@@ -197,7 +199,16 @@ def _csv_cell(value: object) -> str:
     return "'" + text if text[:1] in ("=", "+", "-", "@") else text
 
 
-@router.get("/export.csv")
+@router.get(
+    "/export.csv",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}},
+            "description": "CSV",
+        }
+    },
+)
 def export_contacts(
     ctx: Annotated[AuthContext, Depends(require("contacts.export"))],
     db: DbSession,
@@ -307,6 +318,10 @@ def patch_contact(
         )
     ):
         raise DomainError(422, "UNKNOWN_USER", "Owner is not a member of this organization")
+    if changes.get("branch_id") is not None:
+        get_or_404(db, Branch, changes["branch_id"], ctx.tenant_id)
+        if not ctx.branch_allowed(changes["branch_id"]):
+            raise DomainError(403, "FORBIDDEN", "No access to this branch")
     for key, value in changes.items():
         if key == "tags" and value is not None:
             value = list(dict.fromkeys(t.strip() for t in value if t.strip()))

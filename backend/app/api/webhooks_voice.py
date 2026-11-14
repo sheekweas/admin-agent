@@ -2,8 +2,8 @@
 
 POST /v1/webhooks/voice/{provider}/status?call_id=<our Call.id>
 POST /v1/webhooks/voice/{provider}/gather?call_id=<our Call.id>
-Twilio requests are validated with X-Twilio-Signature when an auth token is configured; the "mock" provider
-is accepted only when settings.voice_provider == "mock".
+Twilio requests must carry a valid X-Twilio-Signature (no auth token configured -> rejected); the "mock"
+provider is accepted only when settings.voice_provider == "mock".
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.schemas import OkOut
 from app.channels.voice import (
     ACK_RU,
     FORWARD_RU,
@@ -61,11 +62,14 @@ async def _load(provider: str, request: Request, db: Session) -> tuple[Call, dic
         raise HTTPException(404, "Unknown call")
     if provider == "twilio":
         _, token, _ = twilio_credentials(db, call.tenant_id)
-        if token:
-            base = get_settings().public_base_url.rstrip("/")
-            url = f"{base}{request.url.path}" + (f"?{request.url.query}" if request.url.query else "")
-            if not validate_twilio_signature(token, url, form, request.headers.get("x-twilio-signature")):
-                raise HTTPException(403, "Bad signature")
+        base = get_settings().public_base_url.rstrip("/")
+        url = f"{base}{request.url.path}" + (f"?{request.url.query}" if request.url.query else "")
+        # fail closed: without an auth token there is nothing to verify the callback against
+        if not token or not validate_twilio_signature(
+            token, url, form, request.headers.get("x-twilio-signature")
+        ):
+            log.warning("voice callback with invalid/unverifiable signature rejected call=%s", call.id)
+            raise HTTPException(403, "Bad signature")
         if call.provider_ref and form.get("CallSid") and form["CallSid"] != call.provider_ref:
             raise HTTPException(403, "Call mismatch")
     return call, form
@@ -75,7 +79,9 @@ def _xml(body: str) -> Response:
     return Response(body, media_type="application/xml")
 
 
-@router.post("/{provider}/status")
+@router.post(
+    "/{provider}/status", response_model=OkOut, responses={403: {"description": "Bad X-Twilio-Signature"}}
+)
 async def voice_status(provider: str, request: Request, db: Session = Depends(get_db)):
     call, form = await _load(provider, request, db)
     status = TWILIO_STATUS.get(form.get("CallStatus", ""), None)
@@ -92,7 +98,11 @@ async def voice_status(provider: str, request: Request, db: Session = Depends(ge
     return {"ok": True}
 
 
-@router.post("/{provider}/gather")
+@router.post(
+    "/{provider}/gather",
+    response_class=Response,
+    responses={200: {"content": {"application/xml": {"schema": {"type": "string"}}}, "description": "TwiML"}},
+)
 async def voice_gather(provider: str, request: Request, db: Session = Depends(get_db)):
     call, form = await _load(provider, request, db)
     digit = (form.get("Digits") or "").strip()[:1]

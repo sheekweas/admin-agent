@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 
+from app.api.schemas import WhatsAppWebhookAck
 from app.channels import whatsapp as wa
 from app.config import get_settings
 from app.db import SessionLocal
@@ -37,7 +38,11 @@ def verify(
 
 
 def _signature_ok(body: bytes, header: str | None, payload: dict) -> bool:
-    """Platform app secret first; otherwise a per-tenant app_secret stored with the integration."""
+    """Platform app secret first; otherwise per-tenant app_secrets stored with the integrations.
+
+    With per-tenant secrets EVERY addressed phone_number_id must verify with its own tenant's secret:
+    a tenant that knows its own app_secret must not be able to sign events for another tenant's number.
+    """
     if wa.verify_signature(body, header):
         return True
     pnids = {e.phone_number_id for e in wa.parse_webhook(payload)}
@@ -49,9 +54,9 @@ def _signature_ok(body: bytes, header: str | None, payload: dict) -> bool:
         for pnid in pnids:
             integ = wa.find_integration_by_phone_number_id(db, pnid)
             secret = read_secrets(integ).get("app_secret") if integ else None
-            if secret and verify_meta_signature(secret, body, header):
-                return True
-    return False
+            if not verify_meta_signature(secret, body, header):
+                return False
+    return True
 
 
 def _ingest(payload: dict) -> list[tuple[uuid.UUID, uuid.UUID]]:
@@ -78,7 +83,9 @@ def _process(pairs: list[tuple[uuid.UUID, uuid.UUID]]) -> None:
         messaging.enqueue_ai_reply(conversation_id, message_id)
 
 
-@router.post("")
+@router.post(
+    "", response_model=WhatsAppWebhookAck, responses={401: {"description": "Invalid X-Hub-Signature-256"}}
+)
 async def receive(request: Request, background: BackgroundTasks) -> dict:
     body = await request.body()
     try:

@@ -16,6 +16,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.ai import orchestrator
+from app.api.schemas import ArticleList, ArticleOut, KnowledgeTestOut, error_responses
 from app.db import get_db
 from app.deps import AuthContext, require
 from app.models import KnowledgeArticle
@@ -73,7 +74,7 @@ def article_out(a: KnowledgeArticle) -> dict[str, Any]:
     }
 
 
-@router.get("")
+@router.get("", response_model=ArticleList)
 def list_articles(
     *,
     status: str | None = None,
@@ -100,7 +101,7 @@ def list_articles(
     return {"items": [article_out(a) for a in rows], "total": total}
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, response_model=ArticleOut)
 def create_article(body: ArticleIn, ctx: KWrite, db: DB) -> dict:
     a = KnowledgeArticle(
         tenant_id=ctx.tenant_id,
@@ -130,12 +131,12 @@ def create_article(body: ArticleIn, ctx: KWrite, db: DB) -> dict:
     return article_out(a)
 
 
-@router.get("/{article_id}")
+@router.get("/{article_id}", response_model=ArticleOut, responses=error_responses(404))
 def get_article(article_id: uuid.UUID, ctx: KRead, db: DB) -> dict:
     return article_out(get_or_404(db, KnowledgeArticle, article_id, ctx.tenant_id))
 
 
-@router.patch("/{article_id}")
+@router.patch("/{article_id}", response_model=ArticleOut, responses=error_responses(404, 409))
 def update_article(article_id: uuid.UUID, body: ArticlePatch, ctx: KWrite, db: DB) -> dict:
     a = get_or_404(db, KnowledgeArticle, article_id, ctx.tenant_id)
     if a.status == "archived":
@@ -163,7 +164,7 @@ def update_article(article_id: uuid.UUID, body: ArticlePatch, ctx: KWrite, db: D
     return article_out(a)
 
 
-@router.post("/{article_id}/publish")
+@router.post("/{article_id}/publish", response_model=ArticleOut, responses=error_responses(404, 409))
 def publish_article(article_id: uuid.UUID, ctx: KPublish, db: DB) -> dict:
     a = get_or_404(db, KnowledgeArticle, article_id, ctx.tenant_id)
     if a.status != "draft":
@@ -184,7 +185,7 @@ def publish_article(article_id: uuid.UUID, ctx: KPublish, db: DB) -> dict:
     return article_out(a)
 
 
-@router.post("/{article_id}/archive")
+@router.post("/{article_id}/archive", response_model=ArticleOut, responses=error_responses(404, 409))
 def archive_article(article_id: uuid.UUID, ctx: KWrite, db: DB) -> dict:
     a = get_or_404(db, KnowledgeArticle, article_id, ctx.tenant_id)
     if a.status == "archived":
@@ -205,7 +206,7 @@ def archive_article(article_id: uuid.UUID, ctx: KWrite, db: DB) -> dict:
     return article_out(a)
 
 
-@router.post("/test")
+@router.post("/test", response_model=KnowledgeTestOut, responses=error_responses(503, e503="AI_UNAVAILABLE"))
 def test_question(body: TestIn, ctx: KRead, db: DB) -> dict:
     """Sandbox: how would the AI answer? No messages, bookings, tasks or tags are created."""
     try:

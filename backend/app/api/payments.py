@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import AuthContext, get_auth, require
+from app.api.schemas import PaymentList, PaymentOut, error_responses
 from app.models import Payment
 from app.services import payments as svc
 from app.services.common import DomainError, get_or_404, tz
@@ -53,7 +54,7 @@ def _branch_check(ctx: AuthContext, p: Payment) -> Payment:
     return p
 
 
-@router.get("")
+@router.get("", response_model=PaymentList, responses=error_responses(403))
 def list_payments(
     date_from: date | None = None,
     date_to: date | None = None,
@@ -90,7 +91,14 @@ def list_payments(
     return {"items": [svc.payment_to_dict(db, p) for p in rows], "total": total}
 
 
-@router.post("", status_code=201)
+@router.post(
+    "",
+    status_code=201,
+    response_model=PaymentOut,
+    responses=error_responses(
+        403, 404, 409, 422, e409="BOOKING_NOT_PAYABLE (held / cancelled / rescheduled booking)"
+    ),
+)
 def create_payment(
     body: PaymentIn, ctx: AuthContext = Depends(require("finance.write")), db: Session = Depends(get_db)
 ):
@@ -114,14 +122,21 @@ def create_payment(
     return svc.payment_to_dict(db, p)
 
 
-@router.get("/{payment_id}")
+@router.get("/{payment_id}", response_model=PaymentOut, responses=error_responses(403, 404))
 def get_payment(
     payment_id: uuid.UUID, ctx: AuthContext = Depends(require("finance.write")), db: Session = Depends(get_db)
 ):
     return svc.payment_to_dict(db, _branch_check(ctx, get_or_404(db, Payment, payment_id, ctx.tenant_id)))
 
 
-@router.post("/{payment_id}/refund", status_code=201)
+@router.post(
+    "/{payment_id}/refund",
+    status_code=201,
+    response_model=PaymentOut,
+    responses=error_responses(
+        403, 404, 409, e409="Refund exceeds the refundable amount / payment not refundable"
+    ),
+)
 def refund(
     payment_id: uuid.UUID, body: RefundIn, ctx: AuthContext = Depends(get_auth), db: Session = Depends(get_db)
 ):
@@ -134,7 +149,7 @@ def refund(
     return svc.payment_to_dict(db, r)
 
 
-@router.post("/{payment_id}/cancel")
+@router.post("/{payment_id}/cancel", response_model=PaymentOut, responses=error_responses(403, 404, 409))
 def cancel(
     payment_id: uuid.UUID,
     body: CancelIn | None = None,

@@ -20,7 +20,20 @@ from app.models import AuditLog, Booking, BookingItem, Branch, Contact, Payment,
 from app.services import booking as booking_svc
 from app.services import crm
 from app.services.availability import parse_slot_id
+from app.api.schemas import error_responses
 from app.services.common import DomainError, mask_phone, tz
+
+TRANSITIONS_DOC = (
+    "Status graph: held → pending | confirmed | cancelled; pending → confirmed | cancelled; "
+    "confirmed → checked_in | completed | no_show | cancelled; checked_in → completed; "
+    "completed, cancelled, no_show, rescheduled are final. Reschedule = the old booking becomes "
+    "`rescheduled` and a NEW booking is returned. Permissions: `bookings.write` (owner/admin) for "
+    "reschedule/cancel; `bookings.write_own` lets a staff member set the status of their own visits only."
+)
+SLOT_409 = (
+    "SLOT_UNAVAILABLE (detail.alternatives lists free slots the caller may book) / INVALID_TRANSITION "
+    "(detail.current) / DEADLINE_PASSED"
+)
 
 router = APIRouter()
 DbSession = Annotated[Session, Depends(get_db)]
@@ -258,7 +271,7 @@ def _one(db: Session, ctx: AuthContext, b: Booking) -> BookingOut:
 
 
 # ---------------------------------------------------------------- routes
-@router.get("", response_model=BookingList)
+@router.get("", response_model=BookingList, responses=error_responses(403, 422))
 def list_bookings(
     ctx: Annotated[AuthContext, Depends(require("bookings.read"))],
     db: DbSession,
@@ -307,7 +320,14 @@ def scoped_alternatives(ctx: AuthContext, exc: DomainError) -> DomainError:
     return exc
 
 
-@router.post("", response_model=BookingOut, status_code=201)
+@router.post(
+    "",
+    response_model=BookingOut,
+    status_code=201,
+    responses=error_responses(
+        403, 404, 409, 422, e404="Contact / service / staff / branch not found", e409=SLOT_409
+    ),
+)
 def create_booking(
     ctx: Annotated[AuthContext, Depends(require("bookings.write_own"))],
     db: DbSession,
@@ -364,14 +384,19 @@ def create_booking(
     return _one(db, ctx, b)
 
 
-@router.get("/{booking_id}", response_model=BookingOut)
+@router.get("/{booking_id}", response_model=BookingOut, responses=error_responses(404))
 def get_booking(
     booking_id: uuid.UUID, ctx: Annotated[AuthContext, Depends(require("bookings.read"))], db: DbSession
 ):
     return _one(db, ctx, _get_visible(db, ctx, booking_id))
 
 
-@router.patch("/{booking_id}", response_model=BookingOut)
+@router.patch(
+    "/{booking_id}",
+    response_model=BookingOut,
+    description=TRANSITIONS_DOC,
+    responses=error_responses(403, 404, 409, 422, e409=SLOT_409),
+)
 def patch_booking(
     booking_id: uuid.UUID,
     body: BookingPatch,
@@ -412,7 +437,7 @@ def patch_booking(
     return _one(db, ctx, b)
 
 
-@router.get("/{booking_id}/history", response_model=HistoryList)
+@router.get("/{booking_id}/history", response_model=HistoryList, responses=error_responses(404))
 def booking_history(
     booking_id: uuid.UUID, ctx: Annotated[AuthContext, Depends(require("bookings.read"))], db: DbSession
 ):

@@ -27,15 +27,16 @@ from app.api import (
     webhooks_voice,
     webhooks_whatsapp,
 )
-from app.config import get_settings
+from app.api.schemas import OkStatus
+from app.config import get_settings, validate_settings
+from app.logging_setup import configure_logging
+from app.middleware import BodyLimitMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='{"ts":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}',
-)
+configure_logging()
 log = logging.getLogger("api")
 
 settings = get_settings()
+validate_settings(settings)  # refuse to start with default/placeholder secrets in production
 app = FastAPI(
     title="AI CRM API",
     version="0.1.0",
@@ -48,6 +49,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Outermost last: headers wrap everything (incl. 413/429), limits run before any body is read.
+app.add_middleware(BodyLimitMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.middleware("http")
@@ -73,7 +78,7 @@ async def request_context(request: Request, call_next):
     return response
 
 
-@app.get("/health")
+@app.get("/health", response_model=OkStatus)
 def health():
     return {"status": "ok"}
 

@@ -35,3 +35,13 @@ def test_tenant_settings_defaults_and_patch(client, world):
     assert r.json()["settings"]["escalation"]["call_after_min"] == 10
     r = client.patch("/v1/tenant", headers=world.headers(world.admin), json={"name": "x"})
     assert r.status_code == 403
+
+
+def test_team_contacts_hidden_from_staff_and_analyst(client, world):
+    """Only owner/admin see colleagues' phones and Telegram ids; everyone sees their own."""
+    for user in (world.staff_user, world.analyst):
+        team = client.get("/v1/team", headers=world.headers(user)).json()
+        others = [m for m in team if m["user_id"] != str(user.id)]
+        assert others and all(m["phone_e164"] is None and m["telegram_chat_id"] is None for m in others)
+    team = client.get("/v1/team", headers=world.headers(world.admin)).json()
+    assert any(m["phone_e164"] == "+77010000002" for m in team)

@@ -501,6 +501,11 @@ def create_booking(
         if reserved:
             break
     if reserved is None:
+        # A concurrent request with the SAME key may have taken this very slot while we waited for the staff
+        # lock: that is a retry of one logical request, so return its booking instead of 409 (load test).
+        existing = _by_idempotency(db, tenant_id, idempotency_key)
+        if existing is not None:
+            return existing
         raise _unavailable(
             db, tenant_id, service, start_at, staff_id, branch_id, now, earliest, strict_branch=strict
         )
@@ -712,6 +717,7 @@ def reschedule_booking(
         "old_booking_id": str(old.id),
         "old_start_at": old.start_at.isoformat(),
         "old_staff_id": str(old.staff_id),
+        "actor_type": actor_type,
     }
     emit_event(db, tenant_id, "booking.rescheduled", "booking", new.id, payload)
     audit(

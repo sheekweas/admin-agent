@@ -170,7 +170,8 @@ def lang_of(value: str | None) -> str:
     return "kk" if value == "kk" else "ru"
 
 
-def render(kind: str, lang: str = "ru", **ctx: Any) -> str:
+def render(kind: str, lang: str = "ru", /, **ctx: Any) -> str:
+    # positional-only: templates may use {kind}/{lang} placeholders (e.g. shift_request's "Тип: {kind}")
     tpl = TEMPLATES[kind].get(lang_of(lang)) or TEMPLATES[kind]["ru"]
     return tpl.format_map(_Default(ctx))
 

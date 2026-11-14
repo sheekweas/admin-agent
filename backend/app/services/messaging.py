@@ -291,6 +291,15 @@ def process_ai_turn(
     """
     from app.ai import orchestrator
 
+    # Lock order contact -> conversation, the same order in which handle_inbound's flush updates them;
+    # the reverse order deadlocked with a concurrent inbound message of the same client (webhook burst).
+    contact_id = db.scalar(
+        select(Conversation.contact_id).where(
+            Conversation.id == conversation_id, Conversation.tenant_id == tenant_id
+        )
+    )
+    if contact_id is not None:
+        db.execute(select(Contact.id).where(Contact.id == contact_id).with_for_update())
     conv = db.scalar(
         select(Conversation)
         .where(Conversation.id == conversation_id, Conversation.tenant_id == tenant_id)
@@ -507,8 +516,23 @@ def _after_commit(db: Session, message_id: uuid.UUID) -> None:
 
 
 @event.listens_for(Session, "after_commit")
-def _run_deliveries(session: Session) -> None:
+def _mark_deliveries(session: Session) -> None:
+    if session.in_nested_transaction():
+        # SQLAlchemy also fires after_commit when a SAVEPOINT is released: the outer transaction (and the
+        # queued message) is not committed yet, so wait for the real COMMIT.
+        return
     ids = session.info.pop("deliver_after_commit", None)
+    if ids:
+        session.info.setdefault("deliver_committed", []).extend(ids)
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _run_deliveries(session: Session, transaction: Any) -> None:
+    # Runs after the committed root transaction has returned its connection to the pool: delivering from
+    # inside after_commit held two pooled connections per thread and starved the pool under load.
+    if transaction.nested or transaction.parent is not None:
+        return
+    ids = session.info.pop("deliver_committed", None)
     if not ids:
         return
     from app.db import SessionLocal

@@ -19,6 +19,10 @@ os.environ.setdefault("LLM_PROVIDER", "mock")
 os.environ.setdefault("WHATSAPP_MODE", "mock")
 os.environ.setdefault("TELEGRAM_MODE", "mock")
 os.environ.setdefault("VOICE_PROVIDER", "mock")
+# Per-IP limits would make bursty suites (all requests come from "testclient") flaky; the limiter has its own
+# tests (tests/test_security_http.py) that switch it on explicitly.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+os.environ.setdefault("RATE_LIMIT_BACKEND", "memory")
 
 import pytest
 from fastapi.testclient import TestClient
@@ -205,3 +209,18 @@ def other_world(db) -> World:
     w.owner = w._user(f"owner-{uuid.uuid4().hex[:6]}@other.kz", "owner")
     db.commit()
     return w
+
+
+# ---------------------------------------------------------------- security suites (two fully-populated tenants)
+@pytest.fixture
+def tenant_a(client, db):
+    from tests.security_helpers import NamedWorld, populate
+
+    return populate(client, db, NamedWorld(db, "a-"), "alpha")
+
+
+@pytest.fixture
+def tenant_b(client, db, tenant_a):
+    from tests.security_helpers import NamedWorld, populate
+
+    return populate(client, db, NamedWorld(db, "b-"), "bravo")

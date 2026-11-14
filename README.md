@@ -69,6 +69,7 @@ CI (`.github/workflows/ci.yml`): ruff + pytest с покрытием на Postgr
 
 - `docs/API.md` — контракт REST API (полная схема — `/openapi.json`)
 - `docs/CONTRACTS.md` — внутренние контракты сервисов
+- `docs/SECURITY.md` — модель угроз, меры защиты (ТЗ §20), ротация секретов, чек-лист продакшена
 - `docs/SPEC_ru.txt` — исходное ТЗ
 - `frontend/README.md` — структура админ-панели
 

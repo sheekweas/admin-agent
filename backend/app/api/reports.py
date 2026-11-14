@@ -8,6 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
+from app.api.schemas import ReportOverview, error_responses
 from app.db import get_db
 from app.deps import AuthContext, require
 from app.services import reports as svc
@@ -15,6 +16,13 @@ from app.services.audit import audit
 from app.services.common import DomainError
 
 router = APIRouter()
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _file_response(media: str) -> dict:
+    return {
+        200: {"content": {media: {"schema": {"type": "string", "format": "binary"}}}, "description": "File"}
+    }
 
 
 def _filter(
@@ -53,7 +61,7 @@ def _report(db: Session, ctx: AuthContext, f: svc.ReportFilter) -> dict:
     return report if ctx.can("finance.read") else svc.mask_finance(report)
 
 
-@router.get("/overview")
+@router.get("/overview", response_model=ReportOverview, responses=error_responses(403))
 def overview(
     date_from: date | None = None,
     date_to: date | None = None,
@@ -91,14 +99,11 @@ def _export(fmt: str, db: Session, ctx: AuthContext, f: svc.ReportFilter) -> Res
     if fmt == "csv":
         body, media = svc.export_csv(report), "text/csv; charset=utf-8"
     else:
-        body, media = (
-            svc.export_xlsx(report),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        body, media = svc.export_xlsx(report), XLSX
     return Response(body, media_type=media, headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
-@router.get("/export.csv")
+@router.get("/export.csv", response_class=Response, responses=_file_response("text/csv"))
 def export_csv(
     date_from: date | None = None,
     date_to: date | None = None,
@@ -114,7 +119,7 @@ def export_csv(
     )
 
 
-@router.get("/export.xlsx")
+@router.get("/export.xlsx", response_class=Response, responses=_file_response(XLSX))
 def export_xlsx(
     date_from: date | None = None,
     date_to: date | None = None,
