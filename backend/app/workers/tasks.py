@@ -89,6 +89,12 @@ def run_reconcile_integrations(db: Session | None = None, now: datetime | None =
     return _with_session(lambda s: reconcile_integrations(s, now), db)
 
 
+def run_voice_retention(db: Session | None = None, now: datetime | None = None) -> int:
+    from app.services.voice_calls import purge_expired_transcripts
+
+    return _with_session(lambda s: purge_expired_transcripts(s, now), db)
+
+
 def run_process_inbound_message(
     conversation_id: str | uuid.UUID,
     message_id: str | uuid.UUID,
@@ -148,6 +154,11 @@ def daily_summary() -> int:
 @celery_app.task(name="ops.reconcile_integrations")
 def reconcile_integrations() -> int:
     return run_reconcile_integrations()
+
+
+@celery_app.task(name="ops.voice_retention")
+def voice_retention() -> int:
+    return run_voice_retention()
 
 
 @celery_app.task(name="ai.process_inbound_message", bind=True, max_retries=5, acks_late=True)

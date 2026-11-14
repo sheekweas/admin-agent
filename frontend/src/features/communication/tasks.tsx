@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BellRing, CheckCircle2, Clock3, PhoneCall } from "lucide-react";
 import { Badge, Button, Card, Dialog, Select } from "@/components/ui";
@@ -20,9 +20,13 @@ export default function TasksPage() {
   const [answer, setAnswer] = useState("");
   const [relay, setRelay] = useState(true);
   const [knowledge, setKnowledge] = useState(false);
-  const query = useApi<Collection<Task>>(can("tasks.read") ? `/v1/admin-tasks?${new URLSearchParams({ ...(status ? { status } : {}), limit: "200" })}` : null, 5000);
+  const [linkedTaskId, setLinkedTaskId] = useState("");
+  useEffect(() => { setLinkedTaskId(new URLSearchParams(window.location.search).get("task_id") || ""); }, []);
+  const linkedTask = useApi<Task>(linkedTaskId && can("tasks.read") ? `/v1/admin-tasks/${encodeURIComponent(linkedTaskId)}` : null, 5000);
+  const listQuery = useApi<Collection<Task>>(can("tasks.read") && !linkedTaskId ? `/v1/admin-tasks?${new URLSearchParams({ ...(status ? { status } : {}), limit: "200" })}` : null, 5000);
+  const query = linkedTaskId ? linkedTask : listQuery;
   const action = useAction();
-  const tasks = items(query.data);
+  const tasks = linkedTaskId ? (linkedTask.data ? [linkedTask.data] : []) : items(listQuery.data);
   const priorityLabel = (value: string) => ({ low: t("Низкий", "Төмен"), normal: t("Обычный", "Қалыпты"), high: t("Высокий", "Жоғары"), urgent: t("Срочный", "Шұғыл") })[value] ?? value;
   const statusLabel = (value: string) => ({ open: t("Ожидает ответа", "Жауап күтуде"), acknowledged: t("В работе", "Орындалуда"), acked: t("В работе", "Орындалуда"), resolved: t("Решено", "Шешілді"), cancelled: t("Отменено", "Бас тартылды") })[value] ?? value;
   async function acknowledge(id: string) { try { await action.run(`/v1/admin-tasks/${id}/ack`); await query.refetch(); } catch { /* useAction displays server errors */ } }

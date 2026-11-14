@@ -132,7 +132,7 @@ def _get_or_create_contact(
             phone_e164=phone_e164,
             name=(name or "").strip()[:200],
             language=language or "ru",
-            source=channel if channel in CONTACT_SOURCES else "manual",
+            source=channel if channel in CONTACT_SOURCES else ("call" if channel == "voice" else "manual"),
             consent_flags={"processing": True},
         )
         db.add(contact)

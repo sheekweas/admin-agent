@@ -582,19 +582,33 @@ class Call(TimestampMixin, Base):
     id: Mapped[uuid.UUID] = uuid_pk()
     tenant_id: Mapped[uuid.UUID] = tenant_fk()
     direction: Mapped[str] = mapped_column(String(10))  # in|out
-    purpose: Mapped[str] = mapped_column(String(30))  # admin_escalation|client_ai|reminder|callback
+    # admin_escalation|client_ai|booking_confirmation|reminder|callback|reschedule
+    purpose: Mapped[str] = mapped_column(String(30))
     to_number: Mapped[str] = mapped_column(String(30))
     from_number: Mapped[str | None] = mapped_column(String(30))
     admin_task_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("admin_tasks.id"))
     contact_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("contacts.id"))
     status: Mapped[str] = mapped_column(
         String(20), default="queued"
-    )  # queued|ringing|answered|completed|no_answer|failed|cancelled
+    )  # queued|ringing|in_progress|answered|completed|no_answer|busy|failed|cancelled
     dtmf: Mapped[str | None] = mapped_column(String(10))
-    provider_ref: Mapped[str | None] = mapped_column(String(200))
+    provider_ref: Mapped[str | None] = mapped_column(String(200), index=True)
     duration_sec: Mapped[int] = mapped_column(Integer, default=0)
-    transcript: Mapped[str] = mapped_column(Text, default="")
+    transcript: Mapped[str] = mapped_column(Text, default="")  # plain text, one "speaker: text" line per turn
     recording_url: Mapped[str | None] = mapped_column(String(1000))
+    # --- AI voice channel (stage 4, additive; see alembic 0002_voice_calls)
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="SET NULL")
+    )
+    booking_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id"))
+    language: Mapped[str | None] = mapped_column(String(5))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # answered
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # [{"speaker": "client"|"ai"|"admin"|"system", "text", "at", "confidence"}]
+    transcript_items: Mapped[list] = mapped_column(JSONType, default=list)
+    # {first_response_ms, turns, recognition_retries, transferred_to_human, booking_created}
+    metrics: Mapped[dict] = mapped_column(JSONType, default=dict)
+    meta: Mapped[dict] = mapped_column(JSONType, default=dict)  # turn-loop state (seq, failures, last TwiML)
 
 
 # ---------------------------------------------------------------- integrations, outbox, audit

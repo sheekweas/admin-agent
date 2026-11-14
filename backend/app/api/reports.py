@@ -8,10 +8,11 @@ from datetime import date
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
-from app.api.schemas import ReportOverview, error_responses
+from app.api.schemas import ReportOverview, VoiceReport, error_responses
 from app.db import get_db
 from app.deps import AuthContext, require
 from app.services import reports as svc
+from app.services import voice_calls
 from app.services.audit import audit
 from app.services.common import DomainError
 
@@ -79,6 +80,18 @@ def overview(
         "currency": svc.tenant_currency(db, ctx.tenant_id),
         **_report(db, ctx, f),
     }
+
+
+@router.get("/voice", response_model=VoiceReport, responses=error_responses(403))
+def voice(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    ctx: AuthContext = Depends(require("reports.read")),
+    db: Session = Depends(get_db),
+):
+    """Voice channel KPIs (ТЗ §13.4) over client calls created in [date_from, date_to] (organisation local
+    dates, both optional). Admin escalation IVR calls are excluded."""
+    return voice_calls.voice_report(db, ctx.tenant_id, date_from, date_to)
 
 
 def _export(fmt: str, db: Session, ctx: AuthContext, f: svc.ReportFilter) -> Response:

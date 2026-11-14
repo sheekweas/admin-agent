@@ -55,3 +55,44 @@ List endpoints return `{"items": [...], "total": N}` and accept `limit` (default
 - `GET/POST /v1/integrations/webhooks`, `DELETE /v1/integrations/webhooks/{id}` ; `GET /v1/integrations/events?status` ; `POST /v1/integrations/events/{id}/retry`
 - `GET /v1/audit?entity&entity_id&action&date_from&date_to`
 - Webhooks: `POST /v1/webhooks/telegram/{tenant_id}` ; `POST /v1/webhooks/voice/{provider}/status`, `/gather`
+
+## Voice (stage 4, ТЗ §13)
+AI phone calls reuse the WhatsApp agent: same prompt (+ phone rules), tools and booking engine; a booking exists only
+after `create_booking` committed. Reading needs `conversations.read` (owner, admin); outbound / simulate need
+`conversations.write`; `/v1/reports/voice` needs `reports.read` (owner, admin, analyst). Numbers are masked for the
+analyst role. Datetimes ISO with offset; rates 0–100.
+
+- `GET /v1/calls?direction=in|out&purpose&status&contact_id&date_from&date_to&limit&offset` (`purpose`/`status` accept
+  comma-separated lists; dates are organisation-local, inclusive) → `{items, total}`, newest first. Item:
+  `{id, direction, purpose, status, from_number, to_number, contact:{id,name,phone_e164}|null, admin_task_id,
+  booking_id|null, started_at, ended_at, duration_sec, transferred_to_human, recording_available, created_at}`
+  - purpose: `client_ai` (inbound AI) | `admin_escalation` (IVR to an admin) | `booking_confirmation` | `reminder` |
+    `callback` | `reschedule`
+  - status: `queued | ringing | in_progress | answered | completed | no_answer | busy | failed | cancelled`
+    (`answered` is used by admin IVR calls; client calls go `in_progress` → `completed`). `started_at` = answered.
+- `GET /v1/calls/{id}` → item + `transcript:[{speaker:"client"|"ai"|"admin"|"system", text, at, confidence|null}]`,
+  `metrics:{first_response_ms|null, turns, recognition_retries, transferred_to_human, booking_created}`.
+  Transcript is `[]` after `settings.voice.transcript_retention_days`. Other organisations' ids → 404.
+- `POST /v1/calls/outbound {contact_id, purpose:"booking_confirmation"|"reminder"|"callback"|"reschedule",
+  booking_id?, admin_task_id?}` → **201** call item (status `ringing`/`queued`; a provider error is returned as
+  status `failed`). `booking_id` defaults to the client's next upcoming booking (required except for `callback`);
+  `admin_task_id` optionally links a "callback" task (task button). Errors:
+  - 409 `CONSENT_REQUIRED` — `contact.consent_flags.outbound_calls` is not true or the client opted out
+  - 409 `OUTSIDE_HOURS` — outside `settings.voice.outbound_hours` (local, default 10–20) or in escalation quiet hours
+  - 409 `DAILY_CAP_REACHED` — `settings.voice.max_outbound_per_day` outbound client calls already placed today
+  - 422 `BOOKING_REQUIRED` | `BOOKING_CONTACT_MISMATCH` | `NO_PHONE`; 404 foreign contact/booking; 503 `VOICE_NOT_CONFIGURED`
+- `POST /v1/calls/simulate {phone, name?, utterances:[string], language?:"ru"|"kk"}` (voice mock mode only, else 404)
+  → call detail. Runs a whole inbound call through the real turn logic; `""` simulates silence; a transfer is
+  simulated as "admin did not answer" (→ callback task).
+- `GET /v1/reports/voice?date_from&date_to` → `{calls, answered, avg_duration_sec, avg_first_response_ms,
+  transfer_rate, booking_rate, recognition_retry_rate}` over client calls (admin IVR calls excluded); rates are
+  percentages of answered calls, `recognition_retry_rate` = failed recognitions / all client utterances.
+- Settings (`GET/PATCH /v1/tenant`, key `settings.voice`): `ai_calls_enabled`, `recording_enabled`,
+  `transcript_retention_days`, `max_outbound_per_day`, `outbound_hours:[from,to]`, `low_confidence_threshold` (0–1),
+  `max_recognition_failures`, `max_turns`, `tts_voice_ru`, `tts_voice_kk`, `tts_language_kk`, `stt_language_ru`,
+  `stt_language_kk`, `transfer_timeout_sec`. PATCH replaces the stored `voice` object; omitted keys fall back to the defaults.
+- Integration `PUT /v1/integrations/voice {config:{phone_number}, secrets:{account_sid, auth_token, from_number}}`:
+  `phone_number` routes inbound calls to the organisation (falls back to `from_number`).
+- Provider webhooks (Twilio, `X-Twilio-Signature` required, fail closed): `POST /v1/webhooks/voice/twilio/inbound`
+  (number's "A call comes in"), `/status` (number's status callback; `call_id` optional — matched by `CallSid`),
+  `/turn?call_id&seq`, `/answer?call_id`, `/dial?call_id`, `/recording?call_id`, `/gather?call_id` (admin IVR).

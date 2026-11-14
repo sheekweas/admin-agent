@@ -13,6 +13,7 @@ from app.api import (
     availability,
     bookings,
     branches,
+    calls,
     contacts,
     conversations,
     integrations,
@@ -95,6 +96,7 @@ app.include_router(contacts.router, prefix=V1 + "/contacts", tags=["crm"])
 app.include_router(leads.router, prefix=V1 + "/leads", tags=["crm"])
 app.include_router(conversations.router, prefix=V1 + "/conversations", tags=["inbox"])
 app.include_router(knowledge.router, prefix=V1 + "/knowledge", tags=["ai"])
+app.include_router(calls.router, prefix=V1 + "/calls", tags=["voice"])
 app.include_router(admin_tasks.router, prefix=V1 + "/admin-tasks", tags=["escalation"])
 app.include_router(payments.router, prefix=V1 + "/payments", tags=["finance"])
 app.include_router(reports.router, prefix=V1 + "/reports", tags=["reports"])

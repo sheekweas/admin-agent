@@ -265,11 +265,15 @@ class _Turn:
 
     def match_service(self) -> dict[str, Any] | None:
         q = content_tokens(self.raw)
-        best, best_score = None, 0
+        best, best_key = None, (0, 0)
         for s in self.services():
-            score = overlap(q, content_tokens(s["title"]))
-            if score > best_score:
-                best, best_score = s, score
+            title = content_tokens(s["title"])
+            hit = overlap(q, title)
+            # More matched words first; on a tie prefer the title with fewer unrequested words
+            # ("шаш қию" -> "Шаш қию", not the "Шаш қию + сақал" combo).
+            key = (hit, -(len(title) - hit))
+            if hit and key > best_key:
+                best, best_key = s, key
         return best
 
     def is_yes(self) -> bool:

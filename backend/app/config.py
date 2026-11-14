@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     twilio_account_sid: str | None = None
     twilio_auth_token: str | None = None
     twilio_from_number: str | None = None
+    # WhatsApp Business Calling API (ТЗ §13.1, §27): not implemented — needs Meta approval per account/country.
+    # When true, requests for the WhatsApp calling channel reach WhatsAppCallingProvider, which still raises
+    # VoiceNotConfigured with an explanation (the flag only exists to wire a future BSP integration).
+    whatsapp_calling_enabled: bool = False
 
     # Outbound webhooks (Zapier etc.)
     webhook_max_attempts: int = 8

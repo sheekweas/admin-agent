@@ -35,6 +35,23 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "max_history_messages": 20,
         "voice_replies": False,
     },
+    "voice": {  # AI phone calls (ТЗ §13, §20.1); see docs/API.md "Voice"
+        "ai_calls_enabled": True,  # inbound calls are answered by the AI (False -> straight to an admin)
+        "recording_enabled": False,  # announce + record calls (only for clients who did not refuse, §20.1)
+        "transcript_retention_days": 90,  # transcripts/recordings are purged after this many days
+        "max_outbound_per_day": 50,  # per-tenant cap on outbound client calls (local day)
+        "outbound_hours": [10, 20],  # local [from, to) hours for outbound client calls
+        "low_confidence_threshold": 0.5,  # STT confidence below this -> re-ask (AT-12)
+        "max_recognition_failures": 2,  # consecutive failed recognitions -> transfer / callback
+        "max_turns": 30,
+        "tts_voice_ru": "Polly.Tatyana",
+        # Twilio has no Kazakh TTS voice: Kazakh text is read by a Russian voice unless configured otherwise
+        "tts_voice_kk": "Polly.Tatyana",
+        "tts_language_kk": "ru-RU",
+        "stt_language_ru": "ru-RU",
+        "stt_language_kk": "kk-KZ",
+        "transfer_timeout_sec": 20,
+    },
     "niche": {
         "medical_safe_mode": False,  # dental: only organisational answers
         "required_fields": ["name"],

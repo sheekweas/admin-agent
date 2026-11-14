@@ -237,6 +237,7 @@ def _run(
         forbidden_topics=list(ai_cfg.get("forbidden_topics") or []),
         allowed_tags=allowed_tags(),
         requires_admin_confirmation=bool(settings.get("requires_admin_confirmation")),
+        channel=conv.channel if conv else "whatsapp",
     )
     ctx = ToolContext(
         db=db,

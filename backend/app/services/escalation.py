@@ -360,8 +360,10 @@ def _call_target(db: Session, task: AdminTask, calls_made: int, force_backup: bo
 
 
 def place_escalation_call(db: Session, task: AdminTask, user: User, now: datetime) -> Call:
-    from app.channels.voice import get_voice_adapter
+    """IVR call to an admin in the admin's own UI language (RU/KK, ТЗ §26.4); no client PII is spoken."""
+    from app.channels.voice import gather_twiml, get_voice_adapter, voice_profile
 
+    lang = nt.lang_of(user.ui_language)
     call = Call(
         tenant_id=task.tenant_id,
         direction="out",
@@ -370,6 +372,7 @@ def place_escalation_call(db: Session, task: AdminTask, user: User, now: datetim
         admin_task_id=task.id,
         contact_id=None,
         status="queued",
+        language=lang,
         created_at=now,
     )
     db.add(call)
@@ -378,7 +381,10 @@ def place_escalation_call(db: Session, task: AdminTask, user: User, now: datetim
     try:
         if adapter is None:
             raise RuntimeError("voice not configured")
-        placed = adapter.place_call(user.phone_e164, call_id=call.id)
+        profile = voice_profile(merged_settings(db.get(Tenant, task.tenant_id)).get("voice"), lang)
+        placed = adapter.place_call(
+            user.phone_e164, call_id=call.id, twiml=gather_twiml(adapter.provider, call.id, lang, profile)
+        )
         call.provider_ref, call.status = placed.provider_ref, placed.status
     except Exception as exc:  # noqa: BLE001 - failed call is recorded; next step tries the next person
         call.status = "failed"

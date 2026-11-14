@@ -11,7 +11,7 @@ from fastapi.routing import APIRoute
 from sqlalchemy import select, text
 
 from app.db import Base
-from app.models import Notification, OutboxEvent
+from app.models import Call, Notification, OutboxEvent
 from tests.booking_helpers import future_day
 from tests.conftest import World
 from tests.ops_helpers import make_lead, make_visit
@@ -159,6 +159,21 @@ def populate(client, db, w: World, tag: str) -> Populated:
         201,
     )
     p.add("task", task["id"])
+    # a call row directly (a simulated call would add a voice conversation to the recorded API contract snapshot)
+    call = Call(
+        tenant_id=w.tenant.id,
+        direction="in",
+        purpose="client_ai",
+        from_number=w.contact.phone_e164,
+        to_number="+77270000001",
+        contact_id=w.contact.id,
+        status="completed",
+        transcript_items=[{"speaker": "client", "text": f"call {tag}", "at": None, "confidence": 0.9}],
+        metrics={"turns": 1},
+    )
+    db.add(call)
+    db.commit()
+    p.add("call", call.id)
     article = _ok(
         client.post("/v1/knowledge", headers=h, json={"title": f"Parking {tag}", "content": "Free parking"}),
         201,
@@ -309,6 +324,7 @@ PARAM_KIND = {
     "branch_id": "branch",
     "service_id": "service",
     "membership_id": "membership",
+    "call_id": "call",
 }
 
 
@@ -357,6 +373,8 @@ def body_for(method: str, path: str, own: Populated) -> Any:
         },
         ("POST", "/v1/contacts"): {"name": "New", "phone": f"+7707{uuid.uuid4().int % 10**7:07d}"},
         ("POST", "/v1/conversations/simulate"): {"phone": "+77015550098", "text": "Привет"},
+        ("POST", "/v1/calls/simulate"): {"phone": "+77015550096", "utterances": ["Здравствуйте"]},
+        ("POST", "/v1/calls/outbound"): {"contact_id": str(w.contact.id), "purpose": "callback"},
         ("POST", "/v1/knowledge"): {"title": "New", "content": "Body"},
         ("POST", "/v1/knowledge/test"): {"question": "Есть парковка?"},
         ("POST", "/v1/admin-tasks"): {"question": "Q?"},

@@ -392,6 +392,75 @@ class KnowledgeTestOut(BaseModel):
     used_articles: list[UsedArticle]
 
 
+# ---------------------------------------------------------------- voice (calls)
+CallDirection = Literal["in", "out"]
+CallPurpose = Literal[
+    "client_ai", "admin_escalation", "booking_confirmation", "reminder", "callback", "reschedule"
+]
+CallStatus = Literal[
+    "queued", "ringing", "in_progress", "answered", "completed", "no_answer", "busy", "failed", "cancelled"
+]
+
+
+class CallContactOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    phone_e164: str | None = Field(description="Masked for the analyst role.")
+
+
+class CallOut(BaseModel):
+    id: uuid.UUID
+    direction: CallDirection
+    purpose: CallPurpose
+    status: CallStatus
+    from_number: str | None = Field(description="E.164; masked for the analyst role.")
+    to_number: str | None = Field(description="E.164; masked for the analyst role.")
+    contact: CallContactOut | None
+    admin_task_id: uuid.UUID | None
+    booking_id: uuid.UUID | None
+    started_at: IsoDateTimeStr | None = Field(description="When the call was answered (null if never).")
+    ended_at: IsoDateTimeStr | None
+    duration_sec: int
+    transferred_to_human: bool
+    recording_available: bool = Field(description="A recording exists (only recorded with consent).")
+    created_at: IsoDateTimeStr | None
+
+
+class CallList(BaseModel):
+    items: list[CallOut]
+    total: int
+
+
+class TranscriptEntry(BaseModel):
+    speaker: Literal["client", "ai", "admin", "system"]
+    text: str
+    at: IsoDateTimeStr | None
+    confidence: float | None = Field(description="Speech-recognition confidence 0–1 (client turns only).")
+
+
+class CallMetricsOut(BaseModel):
+    first_response_ms: int | None = Field(description="Time to the first voice reply to the caller, ms.")
+    turns: int = Field(description="Recognised client utterances.")
+    recognition_retries: int = Field(description="Silent / low-confidence utterances that were re-asked.")
+    transferred_to_human: bool
+    booking_created: bool
+
+
+class CallDetail(CallOut):
+    transcript: list[TranscriptEntry] = Field(description="Empty after the retention period.")
+    metrics: CallMetricsOut
+
+
+class VoiceReport(BaseModel):
+    calls: int = Field(description="Client calls (inbound AI + outbound) created in the period.")
+    answered: int
+    avg_duration_sec: float
+    avg_first_response_ms: float
+    transfer_rate: Percent = Field(description="Answered calls transferred to a human, 0–100.")
+    booking_rate: Percent = Field(description="Answered calls that created a booking, 0–100.")
+    recognition_retry_rate: Percent = Field(description="Failed recognitions / all client utterances, 0–100.")
+
+
 # ---------------------------------------------------------------- webhooks
 class WhatsAppWebhookAck(BaseModel):
     status: Literal["ok"]

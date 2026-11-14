@@ -119,3 +119,19 @@ def test_staff_role_alternatives_only_own(client, world, db):
     alts = r.json()["detail"]["alternatives"]
     assert alts and all(a["staff_id"] == str(world.barber1.id) for a in alts)
     assert db.query(Booking).count() == 2
+
+
+def test_mock_agent_prefers_exact_service_over_combo():
+    """Stage-4 QA: "шаш қию" must match "Шаш қию", not the "Шаш қию + сақал" combo."""
+    from app.ai.mock_llm import _Turn
+
+    turn = _Turn.__new__(_Turn)
+    turn.raw = "ертең шаш қиюға жазылғым келеді"
+    turn._services = [
+        {"id": "combo", "title": "Шаш қию + сақал"},
+        {"id": "cut", "title": "Шаш қию"},
+        {"id": "beard", "title": "Сақал"},
+    ]
+    assert turn.match_service()["id"] == "cut"
+    turn.raw = "шаш қию және сақал"
+    assert turn.match_service()["id"] == "combo"

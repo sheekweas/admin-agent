@@ -70,9 +70,91 @@ Cleanup cancels open bookings and test payments, removes generated shifts,
 deactivates generated staff, soft-deletes services, resolves unfinished tasks,
 and releases conversations to AI. The API has no contact/conversation/lead delete
 endpoints; those unique records and completed booking/audit history remain.
-No fixed demo IDs, browser request stubs or synthetic successful responses are used.
+No fixed demo IDs or synthetic successful API responses are used. The inbox test
+delays a real `/v1/auth/me` response to exercise takeover/refetch ordering.
 
-## Local results
+## Stage 4 intermittent failures (2026-11-14)
+
+The inbox timeout had a deterministic modal synchronization cause. Takeover's
+global query invalidation can update the human-mode badge/button before
+`ConfirmButton` finishes awaiting refetches and closes its native dialog.
+Playwright `fill()` can run on the inert textarea behind that dialog: it reports
+success, but React does not accept the input, so the controlled value returns to
+empty. Delaying the real `/v1/auth/me` response by 2.5 seconds reproduced this
+against the unchanged Docker panel on port 3000. This evidence does **not** show
+a background refresh clearing an accepted user draft or permissions briefly
+becoming false: React Query retains cached session data during refetch.
+
+To repeat the original diagnostic from `frontend/`:
+
+```powershell
+$env:E2E_CHANNEL = 'chrome'
+node scripts/repro-inbox.mjs
+```
+
+The hardened E2E waits for the takeover POST response **and the confirmation
+dialog to close** before typing, and asserts the textarea value before sending.
+It also types an accepted draft before takeover and checks that it survives a
+delayed real permission refresh. No server success is fabricated.
+
+A separate real draft-loss path existed: `selectConversation()` always called
+`setText("")`, including when reselecting the active row. Inbox drafts now live
+in a map keyed by conversation ID, survive row reselection, switches, mode and
+query updates, and clear only after a successful send. A late send clears only
+the matching submitted snapshot, preserving newer edits. Failed sends retain
+their drafts. The composer stays mounted when write permission changes (hidden
+when unauthorized); cached detail errors and cached session refresh errors no
+longer replace the mounted editor/page. Logout and actual session expiration
+still clear the session as before. Drafts are in-memory for the mounted inbox;
+reload persistence is not enabled.
+
+The barber failure was a real staff-directory pagination bug, **not** a booking
+outside the calendar range. The original mobile trace returned 50 of 55 staff;
+the first page contained accumulated E2E staff and omitted Арман. `/staff`
+filtered that incomplete first page to the logged-in staff ID and displayed an
+empty schedule. Staff users now fetch their own profile by ID. The E2E obtains
+that profile directly, creates unique own/other bookings through the API,
+selects the created booking's date in its branch timezone, and verifies the
+exact visible date response and own-booking visibility/other-booking exclusion.
+
+New Testing Library regressions cover row reselection/switches, delayed session
+refresh without editor remount, mode updates, failed sends, newer edits during
+slow sends, successful clearing, cached session refresh failure through the real
+Shell, and an own staff profile beyond the first 50 directory entries.
+TypeScript excludes generated Playwright reports/results so extracted trace
+source snapshots do not become application build inputs.
+
+Stage 4 validation used the unchanged running API at `localhost:8000` and a
+fresh production build served at `localhost:3100`, with installed Chrome. All
+three full runs were sequential against the same database, with no retries,
+database reset, container restart, or implementation changes between runs.
+
+| Check | Result |
+| --- | --- |
+| Full E2E run 1 | **42 passed**, 1.0 minute |
+| Full E2E run 2 | **42 passed**, 1.0 minute |
+| Full E2E run 3 | **42 passed**, 1.0 minute |
+| `npm run lint` | Passed |
+| `npx tsc --noEmit` | Passed |
+| `npx vitest run` | **39 passed**, 9 files |
+| `npm run build` | Passed |
+| `git diff --check -- frontend` | Passed |
+
+Run logs are `frontend/docs/stage4-run1.log` through `stage4-run3.log` locally;
+Playwright artifacts are retained in `frontend/test-results-stage4-run1/`
+through `test-results-stage4-run3/`. To repeat each full run:
+
+```powershell
+$env:E2E_BASE_URL = 'http://localhost:3100'
+$env:E2E_CHANNEL = 'chrome'
+npx playwright test --output=test-results-stage4-run1
+```
+
+Only `frontend/` was edited for this task. No commit/push was made and no
+containers were stopped. Port 3000 continues serving the existing Docker panel;
+the fresh panel is left running on port 3100.
+
+## Earlier validation (before stage 4)
 
 Validated on 2026-11-14 against the running API at `localhost:8000` and a fresh
 production frontend at `localhost:3100`, using installed Google Chrome through

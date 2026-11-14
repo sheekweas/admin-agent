@@ -35,6 +35,15 @@ Out of scope here (infrastructure): TLS termination, WAF, backups encryption, DB
 - Telegram: `X-Telegram-Bot-Api-Secret-Token` = HMAC(platform secret, tenant id) — compared in constant time; actions require an active
   owner/admin of that tenant (by `telegram_chat_id`) with branch access; other chats are refused and audited.
 - Twilio: `X-Twilio-Signature` is mandatory (no auth token ⇒ 403), `CallSid` must match; the `mock` provider is disabled outside mock mode.
+- Voice AI calls (stage 4): the same check on `inbound`/`turn`/`answer`/`dial`/`recording`/`status`; `inbound` resolves the tenant
+  from the called number first and verifies with *that* tenant's token (a number configured for two tenants is refused). Turns
+  are idempotent per `seq` (a replayed webhook gets the stored TwiML, the AI is not run twice). TwiML contains only static
+  phrases, the AI reply and what the caller said — never CRM data (admin IVR speaks no client data at all, §26.4).
+- Calls/recordings (§20.1): outbound AI calls need `consent_flags.outbound_calls` (and no opt-out), run only in
+  `settings.voice.outbound_hours` outside quiet hours, capped per tenant per day; recording is announced, skipped for clients who
+  refused (`call_recording=false`; outbound needs `true`), and a recording URL is stored only for such consented calls;
+  transcripts, voice-turn messages and recording URLs are erased after `transcript_retention_days` (`ops.voice_retention`).
+  Saying «не звоните» during a call sets the opt-out (and withdraws `outbound_calls`).
 - Outbound: `X-CRM-Signature: sha256=hex(HMAC-SHA256(secret, "{X-CRM-Timestamp}." + raw_body))`. Reference receiver check:
   `app.security.verify_crm_webhook(secret, raw_body, signature, timestamp, tolerance_s=300)`:
 
@@ -111,4 +120,7 @@ Out of scope here (infrastructure): TLS termination, WAF, backups encryption, DB
   active user stays valid until expiry; there is no refresh/revocation list yet.
 - ~~`GET /v1/team` shows colleagues' phones to all roles~~ — fixed in v0.3.0: only owner/admin see colleagues' phones/Telegram ids.
 - Login rate limiting is per IP; distributed credential stuffing needs an upstream WAF / captcha.
+- Voice: a recording that Twilio produced for a call without consent is not stored, but is not deleted at Twilio either (delete
+  via the Twilio console / API, or keep `recording_enabled=false`). `ai_runs` keep tool inputs (e.g. the caller's name) beyond the
+  transcript retention period.
 - Telegram webhook answers 401 (not 403) to a wrong secret token — kept for backward compatibility with existing clients/tests.

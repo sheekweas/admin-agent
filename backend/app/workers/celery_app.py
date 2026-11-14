@@ -36,6 +36,7 @@ celery_app.conf.update(
             ("deliver-stale-messages", "ops.deliver_stale_messages", 30.0),
             ("daily-summary", "ops.daily_summary", 600.0),
             ("reconcile-integrations", "ops.reconcile_integrations", 3600.0),
+            ("voice-retention", "ops.voice_retention", 3600.0),  # transcripts/recordings TTL, stale calls
         )
     },
 )

@@ -43,11 +43,29 @@ test('inbox: simulator AI reply, human takeover and return to AI', async ({ page
     expect(reply, 'simulator must produce a real AI response').toBeDefined();
     await expect(page.getByRole('article').getByText(reply!.text, { exact: true })).toBeVisible();
     await expect(page.getByText('AI отвечает', { exact: true }).last()).toBeVisible();
+    const composer = page.getByRole('textbox', { name: 'Ответ клиенту' });
+    const draft = unique('Черновик до смены режима');
+    await composer.fill(draft);
+    // A mode update can arrive while the confirmation dialog is still modal.
+    // Delay the real permission refresh to exercise that ordering every run.
+    await page.route('**/v1/auth/me', async route => {
+      const response = await route.fetch();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await route.fulfill({ response });
+    });
     await page.getByRole('button', { name: 'Взять диалог', exact: true }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Подтвердить', exact: true }).click();
+    const takeoverResponse = page.waitForResponse(response => response.url().endsWith(`/v1/conversations/${result.conversation_id}/takeover`) && response.request().method() === 'POST');
+    const confirmation = page.getByRole('dialog');
+    await confirmation.getByRole('button', { name: 'Подтвердить', exact: true }).click();
+    const takeover = await takeoverResponse;
+    expect(takeover.ok(), await takeover.text()).toBeTruthy();
+    await expect(confirmation).not.toBeVisible();
+    await page.unroute('**/v1/auth/me');
     await expect(page.getByRole('button', { name: 'Вернуть AI', exact: true })).toBeVisible();
+    await expect(composer).toHaveValue(draft);
     const answer = unique('Ответ администратора');
-    await page.getByRole('textbox', { name: 'Ответ клиенту' }).fill(answer);
+    await composer.fill(answer);
+    await expect(composer).toHaveValue(answer);
     await page.getByRole('button', { name: 'Отправить', exact: true }).click();
     await expect(page.getByText(answer, { exact: true }).last()).toBeVisible();
     await expect(page.getByText('Человек отвечает', { exact: true }).last()).toBeVisible();

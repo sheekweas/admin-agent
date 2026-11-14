@@ -89,6 +89,18 @@ NICHE_RULES: dict[str, str] = {
     "barbershop": "Barbershop: services are haircuts, beard and grooming; specialists are barbers (шебер / мастер).",
 }
 
+# Appended to the dynamic block for phone calls (keeps the cached stable prefix identical for all channels).
+VOICE_CHANNEL_RULES = (
+    "Channel: PHONE CALL. Your reply is read aloud by text-to-speech, the client hears it once. "
+    "Use 1-2 short sentences, no lists, markdown, emoji, links or symbols. Say dates as day + month words "
+    "(e.g. «16 ноября» / «16 қараша») and times as «в 16:00»; never read out ids, long numbers or phone "
+    "numbers. Before create_booking read back the service, date, time and the client's name and ask for an "
+    "explicit «да» / «иә». If the date or time is ambiguous or you are not sure you heard it right, ask again "
+    "with concrete options instead of guessing. You do not need to offer a human: the system transfers the "
+    "call when the client asks for one or recognition keeps failing. Written confirmation is sent to "
+    "WhatsApp by the system when the client allowed it."
+)
+
 FALLBACK_REPLIES: dict[str, dict[str, str]] = {
     "escalated": {
         "ru": "Я уточню этот вопрос у администратора и вернусь с ответом.",
@@ -112,6 +124,7 @@ class PromptContext:
     forbidden_topics: list[str] = field(default_factory=list)
     allowed_tags: list[str] = field(default_factory=list)
     requires_admin_confirmation: bool = False
+    channel: str = "whatsapp"
 
 
 def _untrusted_json(value: Any) -> str:
@@ -136,6 +149,8 @@ def build_context_block(ctx: PromptContext) -> str:
         f"Organisation: {ctx.tenant_name} (niche: {ctx.niche}). Tone: {ctx.tone}.",
         f"Detected language of the latest client message: {ctx.language}. Reply in this language.",
     ]
+    if ctx.channel == "voice":
+        parts.append(VOICE_CHANNEL_RULES)
     if rule := NICHE_RULES.get(ctx.niche):
         parts.append(f"Niche rules: {rule}")
     if ctx.forbidden_topics:

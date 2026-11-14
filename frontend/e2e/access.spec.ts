@@ -6,9 +6,7 @@ import { bookingJson, bookingPhone, provisionBookingResources, cleanupBookingRes
 const apiURL = process.env.E2E_API_URL || 'http://localhost:8000';
 
 async function authenticate(page: Page, request: APIRequestContext, email = 'owner@demo.kz') {
-  const response = await request.post(`${apiURL}/v1/auth/login`, { data: { email, password: 'demo12345' } });
-  expect(response.ok(), await response.text()).toBeTruthy();
-  const login = await response.json();
+  const login = await createSession(request, email.split('@')[0]);
   await page.addInitScript(value => {
     localStorage.setItem('crm:token', value.access_token);
     localStorage.setItem('crm:tenant', value.tenant_id);
@@ -80,13 +78,17 @@ test('barber sees only their schedule and bookings and cannot access restricted 
   try {
   const forbiddenSchedule = await request.get(`${apiURL}/v1/staff/${resources.staff.id}/shifts`, {headers});
   expect(forbiddenSchedule.status()).toBe(403);
-  const staffList = await bookingJson<{items: {id: string; branch_id: string; service_ids: string[]}[]}>(ownerAPI, 'GET', '/v1/staff?limit=200');
-  const own = staffList.items.find(person => person.id === me.staff_id)!;
+  // Fetch by identity: accumulated staff can push the barber beyond a list page.
+  const own = await bookingJson<{id: string; branch_id: string; service_ids: string[]}>(ownerAPI, 'GET', `/v1/staff/${me.staff_id}`);
   expect(own.service_ids.length, 'Demo barber must offer a service').toBeGreaterThan(0);
   const ownAvailability = await bookingJson<{items: BookingSlot[]}>(ownerAPI, 'GET', `/v1/availability?${new URLSearchParams({service_id: own.service_ids[0], staff_id: own.id, branch_id: own.branch_id, date_from: resources.day, date_to: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)})}`);
-  expect(ownAvailability.items.length, 'Demo barber needs a free slot tomorrow').toBeGreaterThan(0);
-  const day = new Intl.DateTimeFormat('en-CA', {timeZone: resources.branch.timezone, year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ownAvailability.items[0].start_at));
+  expect(ownAvailability.items.length, 'Demo barber needs a free slot in the next two weeks').toBeGreaterThan(0);
+  const branches = await bookingJson<{items: {id: string; timezone: string}[]}>(ownerAPI, 'GET', '/v1/branches');
+  const ownBranch = branches.items.find(branch => branch.id === own.branch_id)!;
+  expect(ownBranch, 'Barber branch must exist').toBeTruthy();
+  const day = new Intl.DateTimeFormat('en-CA', {timeZone: ownBranch.timezone, year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ownAvailability.items[0].start_at));
   const otherAvailability = await bookingJson<{items: BookingSlot[]}>(ownerAPI, 'GET', `/v1/availability?${new URLSearchParams({service_id: resources.service.id, staff_id: resources.staff.id, branch_id: resources.branch.id, date_from: day, date_to: day})}`);
+  expect(otherAvailability.items.length, 'Isolated staff needs a slot on the barber booking day').toBeGreaterThan(0);
   for (const [name, serviceId, slot] of [
     [`E2E own ${Date.now()}`, own.service_ids[0], ownAvailability.items[0]],
     [`E2E other ${Date.now()}`, resources.service.id, otherAvailability.items[0]],
@@ -103,11 +105,15 @@ test('barber sees only their schedule and bookings and cannot access restricted 
   expect(bookings.items.every((booking: { staff: { id: string } }) => booking.staff.id === me.staff_id)).toBeTruthy();
   await expect(page.locator('.calendar-column-title').filter({ hasText: ownStaff.name })).toHaveCount(1);
   await expect(page.locator('.calendar-column-title')).toHaveCount(2);
-  const tomorrowBookings = page.waitForResponse(response => response.url().includes('/v1/bookings?') && response.url().includes(day) && response.ok());
+  const selectedDayBookings = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname.endsWith('/v1/bookings') && url.searchParams.get('date_from') === day && url.searchParams.get('date_to') === day && response.ok();
+  });
   await page.getByLabel('Дата', {exact: true}).fill(day);
-  const tomorrow = await (await tomorrowBookings).json();
-  expect(tomorrow.items.some((booking: { id: string }) => booking.id === created[0].id)).toBeTruthy();
-  expect(tomorrow.items.some((booking: { id: string }) => booking.id === created[1].id)).toBeFalsy();
+  await expect(page.getByLabel('Дата', {exact: true})).toHaveValue(day);
+  const selectedDay = await (await selectedDayBookings).json();
+  expect(selectedDay.items.some((booking: { id: string }) => booking.id === created[0].id)).toBeTruthy();
+  expect(selectedDay.items.some((booking: { id: string }) => booking.id === created[1].id)).toBeFalsy();
   await expect(page.locator('.calendar-booking').filter({ hasText: created[0].contact.name })).toBeVisible();
   await expect(page.locator('.calendar-booking').filter({ hasText: created[1].contact.name })).toHaveCount(0);
   for (const path of ['/finance', '/analytics', '/integrations']) {
@@ -136,7 +142,7 @@ test('analyst can view reports but cannot edit clients, staff, services or booki
   }
 });
 
-for (const route of ['/', '/calendar', '/inbox', '/clients']) {
+for (const route of ['/', '/calendar', '/inbox', '/clients', '/calls']) {
   test(`accessibility: ${route} has no serious or critical axe violations`, async ({ page, request }, testInfo) => {
     await authenticate(page, request);
     await page.goto(route);
