@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     llm_provider: str = "mock"  # "anthropic" | "mock"
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-opus-5-5"
+    # Platform-wide emergency AI off-switch (ТЗ §23.1): every AI turn (WhatsApp/Telegram text, voice) is
+    # skipped -> the tenant's fallback message + an admin task, conversation handed to humans. Restart needed.
+    ai_globally_disabled: bool = False
 
     # WhatsApp Cloud API (platform-level app secret; per-tenant tokens live in integrations table)
     whatsapp_app_secret: str = "dev-app-secret"
@@ -70,6 +73,11 @@ class Settings(BaseSettings):
     rate_limit_login_per_minute: int = 20
     rate_limit_webhook_per_minute: int = 600
 
+    # Prometheus /metrics (app.metrics). With METRICS_TOKEN set a matching "Authorization: Bearer" is required;
+    # without it only loopback/private-network clients are served.
+    metrics_enabled: bool = True
+    metrics_token: str | None = None
+
     @property
     def is_production(self) -> bool:
         return self.env.lower() in PRODUCTION_ENVS
@@ -86,6 +94,8 @@ def production_problems(s: Settings) -> list[str]:
         problems.append("SECRETS_ENCRYPTION_KEY is shorter than 32 characters")
     if s.telegram_webhook_secret in _PLACEHOLDERS or len(s.telegram_webhook_secret) < 16:
         problems.append("TELEGRAM_WEBHOOK_SECRET is the default/placeholder or too short")
+    if s.metrics_token is not None and 0 < len(s.metrics_token) < 24:
+        problems.append("METRICS_TOKEN is shorter than 24 characters")
     if s.whatsapp_mode == "live":
         if s.whatsapp_app_secret in _PLACEHOLDERS:
             problems.append("WHATSAPP_APP_SECRET is the default/placeholder")

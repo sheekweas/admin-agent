@@ -432,7 +432,9 @@ def start_inbound(
     greeting = _t("greeting", lang, tenant=tenant.name)
     if recording:
         greeting += " " + _t("recording", lang)
-    if not vcfg.get("ai_calls_enabled", True) or not cfg["ai"].get("enabled", True):
+    from app.ai.orchestrator import ai_globally_disabled
+
+    if not vcfg.get("ai_calls_enabled", True) or not cfg["ai"].get("enabled", True) or ai_globally_disabled():
         _append(call, "ai", greeting)
         _message(db, call, "out", "ai", greeting)
         return call, transfer(db, call, reason="ai_disabled", preface=greeting, now=now)

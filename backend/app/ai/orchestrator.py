@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.ai import knowledge, prompts
 from app.ai.llm import LLM, LLMError, LLMRequest, get_llm
 from app.ai.text import detect_language
+from app.config import get_settings
 from app.ai.tools import (
     TAG_WANTS_TODAY,
     TOOL_DEFINITIONS,
@@ -57,6 +58,29 @@ class TurnOutcome:
     escalated: bool = False
     booking_done: bool = False
     ai_run_id: uuid.UUID | None = None
+
+
+class AIGloballyDisabled(LLMError):
+    """Platform kill switch AI_GLOBALLY_DISABLED=true (ТЗ §23.1): no LLM call at all."""
+
+
+KILL_SWITCH_ERROR = "AI_GLOBALLY_DISABLED"
+
+
+def ai_globally_disabled() -> bool:
+    return bool(get_settings().ai_globally_disabled)
+
+
+def _check_kill_switch() -> None:
+    if ai_globally_disabled():
+        raise TurnFailed(
+            AIGloballyDisabled(KILL_SWITCH_ERROR),
+            provider="disabled",
+            model="",
+            latency_ms=0,
+            tool_calls=[],
+            article_ids=[],
+        )
 
 
 class TurnFailed(RuntimeError):
@@ -301,7 +325,11 @@ def _run(
 
 
 def run_turn(db: Session, conv: Conversation, trigger: Message, *, llm: LLM | None = None) -> TurnOutcome:
-    """Run the AI for one inbound client message and persist state + AIRun (no delivery, no commit)."""
+    """Run the AI for one inbound client message and persist state + AIRun (no delivery, no commit).
+
+    With the platform kill switch on it raises TurnFailed before touching the model: the callers then
+    send the tenant's fallback message and hand the conversation to a human (same path as AT-10)."""
+    _check_kill_switch()
     tenant = db.get(Tenant, conv.tenant_id)
     assert tenant is not None
     settings = merged_settings(tenant)
@@ -396,6 +424,7 @@ def run_sandbox(
 ) -> TurnOutcome:
     """Knowledge-base test (/knowledge/test): same prompt, tools and knowledge, but every mutating tool is
     stubbed and everything the turn touched is rolled back."""
+    _check_kill_switch()
     tenant = db.get(Tenant, tenant_id)
     assert tenant is not None
     lang = language or detect_language(question) or tenant.default_language

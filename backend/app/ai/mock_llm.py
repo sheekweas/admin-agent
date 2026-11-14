@@ -118,6 +118,10 @@ T: dict[str, dict[str, str]] = {
         "kk": "Сәлеметсіз бе! Мен {tenant} виртуалды көмекшісімін. Бағаларды айтып, ыңғайлы уақытқа жазып "
         "бере аламын. Қалай көмектесейін?",
     },
+    "clarify_service": {
+        "ru": "Уточните, пожалуйста, какая услуга вас интересует: {items}?",
+        "kk": "Қай қызмет қызықтыратынын нақтылаңызшы: {items}?",
+    },
     "ask_service": {
         "ru": "На какую услугу вас записать? Доступно: {services}.",
         "kk": "Қай қызметке жазылғыңыз келеді? Қолжетімді: {services}.",
@@ -248,6 +252,7 @@ class _Turn:
         self.lang = req.language if req.language in ("ru", "kk") else "ru"
         self.st = req.state
         self.raw = req.latest_text or ""
+        self.ambiguous: list[dict[str, Any]] = []
         self.low = self.raw.lower().replace("ё", "е")
         self.words = set(tokens(self.raw))
         self.today = req.today or date.today()
@@ -264,17 +269,28 @@ class _Turn:
         return self._services
 
     def match_service(self) -> dict[str, Any] | None:
+        """Best service for the client's words; None when nothing matches OR several match equally well.
+
+        More matched words win; on a tie the title with fewer unrequested words wins ("шаш қию" -> "Шаш қию",
+        not the "Шаш қию + сақал" combo). A remaining tie ("стрижка" -> "Мужская стрижка" vs "Стрижка бороды")
+        is NOT guessed: candidates go to ``self.ambiguous`` and the agent asks the client to choose.
+        """
         q = content_tokens(self.raw)
-        best, best_key = None, (0, 0)
+        scored = []
         for s in self.services():
             title = content_tokens(s["title"])
             hit = overlap(q, title)
-            # More matched words first; on a tie prefer the title with fewer unrequested words
-            # ("шаш қию" -> "Шаш қию", not the "Шаш қию + сақал" combo).
-            key = (hit, -(len(title) - hit))
-            if hit and key > best_key:
-                best, best_key = s, key
-        return best
+            if hit:
+                scored.append(((hit, -(len(title) - hit)), s))
+        self.ambiguous = []
+        if not scored:
+            return None
+        top = max(key for key, _ in scored)
+        best = [s for key, s in scored if key == top]
+        if len(best) > 1:
+            self.ambiguous = best
+            return None
+        return best[0]
 
     def is_yes(self) -> bool:
         return bool(self.words & YES) and not self.words & NO
@@ -421,6 +437,9 @@ class _Turn:
             self.call("add_tag", {"tag": TAG_ASKED_PRICE})
             self.st.update(service_id=svc["service_id"], service_title=svc["title"])
             return self.t("price", service=svc["title"], price=svc["price"], duration=svc["duration_min"])
+        if self.ambiguous:
+            items = ", ".join(f"{s['title']} — {s['price']} ₸" for s in self.ambiguous)
+            return self.t("clarify_service", items=items)
         q = content_tokens(self.raw)
         generic = not [w for w in q if not _has(w, (*KW_PRICE, "услуг", "прайс", "қызмет"))]
         if generic and self.services():
@@ -471,7 +490,7 @@ class _Turn:
             st.pop("slot", None)
         if not st.get("service_id"):
             st["awaiting"] = "service"
-            names = ", ".join(s["title"] for s in self.services()) or "—"
+            names = ", ".join(s["title"] for s in (self.ambiguous or self.services())) or "—"
             return self.t("ask_service", services=names)
         self.call("update_lead", {"stage": "qualified", "service_id": st["service_id"]})
         if not st.get("date"):

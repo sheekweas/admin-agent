@@ -1,6 +1,6 @@
 [project]
 name = "ai-crm"
-version = "0.1.0"
+version = "1.0.0"
 description = "AI CRM for service businesses: WhatsApp AI agent, booking engine, CRM, Telegram escalation, analytics"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,6 +19,7 @@ dependencies = [
     "phonenumbers>=8.13",
     "python-multipart>=0.0.18",
     "openpyxl>=3.1",
+    "prometheus-client>=0.21",
 ]
 
 [project.optional-dependencies]

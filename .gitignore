@@ -16,3 +16,9 @@ out/
 # QA artefacts (large / environment-specific)
 frontend/qa-screenshots/
 frontend/docs/qa-*-evidence.json
+
+# production secrets
+deploy/.env.production
+docs/user-guide/preview*
+docs/user-guide/*.json
+docs/user-guide/verify.py

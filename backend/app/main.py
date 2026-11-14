@@ -31,6 +31,7 @@ from app.api import (
 from app.api.schemas import OkStatus
 from app.config import get_settings, validate_settings
 from app.logging_setup import configure_logging
+from app.metrics import metrics_endpoint, observe_request
 from app.middleware import BodyLimitMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 
 configure_logging()
@@ -40,7 +41,7 @@ settings = get_settings()
 validate_settings(settings)  # refuse to start with default/placeholder secrets in production
 app = FastAPI(
     title="AI CRM API",
-    version="0.1.0",
+    version="1.0.0",
     description="WhatsApp AI agent · booking engine · CRM · Telegram escalation · analytics",
 )
 app.add_middleware(
@@ -64,10 +65,12 @@ async def request_context(request: Request, call_next):
         response = await call_next(request)
     except Exception:
         log.exception("unhandled error rid=%s path=%s", rid, request.url.path)
+        observe_request(request.scope, request.method, 500, time.perf_counter() - start)
         return JSONResponse(
             {"detail": {"code": "INTERNAL", "message": "Internal error", "request_id": rid}}, 500
         )
     response.headers["x-request-id"] = rid
+    observe_request(request.scope, request.method, response.status_code, time.perf_counter() - start)
     log.info(
         "rid=%s %s %s %s %.0fms",
         rid,
@@ -83,6 +86,9 @@ async def request_context(request: Request, call_next):
 def health():
     return {"status": "ok"}
 
+
+# Prometheus scrape endpoint: internal network or METRICS_TOKEN only (app.metrics.authorize); not in OpenAPI.
+app.add_route("/metrics", metrics_endpoint, methods=["GET"], include_in_schema=False)
 
 V1 = "/v1"
 app.include_router(auth.router, prefix=V1 + "/auth", tags=["auth"])

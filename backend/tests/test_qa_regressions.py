@@ -135,3 +135,16 @@ def test_mock_agent_prefers_exact_service_over_combo():
     assert turn.match_service()["id"] == "cut"
     turn.raw = "шаш қию және сақал"
     assert turn.match_service()["id"] == "combo"
+
+
+def test_mock_agent_asks_when_services_tie():
+    """v1.0 QA: "стрижка" fits "Мужская стрижка" and "Стрижка бороды" equally -> ask, never guess a price."""
+    from app.ai.mock_llm import _Turn
+
+    turn = _Turn.__new__(_Turn)
+    turn.raw = "Сколько стоит стрижка?"
+    turn._services = [{"title": "Стрижка бороды"}, {"title": "Мужская стрижка"}]
+    assert turn.match_service() is None
+    assert {s["title"] for s in turn.ambiguous} == {"Стрижка бороды", "Мужская стрижка"}
+    turn.raw = "Сколько стоит мужская стрижка?"
+    assert turn.match_service()["title"] == "Мужская стрижка" and turn.ambiguous == []

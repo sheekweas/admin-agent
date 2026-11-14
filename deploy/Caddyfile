@@ -1,0 +1,47 @@
+# Reverse proxy with automatic HTTPS (Let's Encrypt / ZeroSSL via ACME).
+# DNS A/AAAA records of API_DOMAIN and APP_DOMAIN must point to this host; ports 80 and 443 open.
+# For a local test use API_DOMAIN=api.localhost APP_DOMAIN=app.localhost: Caddy then issues certificates
+# from its internal CA automatically (no ACME).
+{
+	email {$ACME_EMAIL}
+	admin 127.0.0.1:2019
+	# If an external load balancer sits in front of Caddy, add here:
+	#   servers { trusted_proxies static <LB addresses> }
+	# otherwise client-supplied X-Forwarded-For is ignored (not spoofable).
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$API_DOMAIN} {
+	import common
+
+	# Prometheus endpoint is internal only (scraped inside the docker network or with METRICS_TOKEN)
+	@internal path /metrics /metrics/*
+	respond @internal 404
+
+	# app limits: 1 MB for webhooks, 10 MB for the API (app.middleware); proxy limit slightly above
+	request_body {
+		max_size 12MB
+	}
+
+	reverse_proxy api:8000 {
+		health_uri /health
+		health_interval 30s
+	}
+}
+
+{$APP_DOMAIN} {
+	import common
+	reverse_proxy frontend:3000
+}

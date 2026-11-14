@@ -112,6 +112,8 @@ Out of scope here (infrastructure): TLS termination, WAF, backups encryption, DB
 - [ ] Log shipping keeps redaction (JSON logs from the app); no request-body logging at the proxy for `/v1/auth/login` and webhooks.
 - [ ] Mock adapters off for live tenants (`LLM_PROVIDER`, `WHATSAPP_MODE`, `TELEGRAM_MODE`, `VOICE_PROVIDER`); `/v1/conversations/simulate` is disabled outside WhatsApp mock mode.
 - [ ] Monitor `access.denied` audit rows, 401/403/429 rates on webhooks, `ai_runs` with `unverified_booking_claim` / repeated tool rejections.
+- [ ] `/metrics` is not reachable from the internet (Caddy answers 404); set `METRICS_TOKEN` (≥ 24 chars) if Prometheus scrapes from outside the docker network.
+- [ ] Deployment via `deploy/docker-compose.prod.yml` (docs/OPERATIONS.md): DB/Redis without published ports, Redis password, encrypted off-site backups with a tested restore.
 - [ ] Run the security suites before each release: `pytest tests/test_security_*.py tests/test_prompt_injection.py tests/test_openapi.py`.
 
 ## 5. Known limitations / follow-ups

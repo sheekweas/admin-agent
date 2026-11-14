@@ -1,0 +1,116 @@
+# Suggested Prometheus alerting rules for AI CRM (docs/OPERATIONS.md §6). Thresholds are starting points:
+# tune them after 2-4 weeks of real traffic. Metrics: GET /metrics on each api instance (app/metrics.py),
+# disk: node_exporter. Check: promtool check rules prometheus-alerts.yml
+groups:
+  - name: ai-crm
+    rules:
+      - alert: CrmApiDown
+        expr: up{job="ai-crm-api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "API instance {{ $labels.instance }} is not scrapeable"
+          runbook: "docs/OPERATIONS.md#api-недоступен"
+
+      - alert: CrmDatabaseUnreachable
+        expr: crm_db_up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "API cannot query PostgreSQL"
+
+      - alert: CrmHigh5xxRate
+        expr: |
+          sum(rate(crm_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(crm_http_requests_total[5m])), 1e-9) > 0.02
+          and sum(rate(crm_http_requests_total{status=~"5.."}[5m])) > 0.05
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "More than 2% of API requests fail with 5xx"
+
+      - alert: CrmSlowApi
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(crm_http_request_duration_seconds_bucket{route!~"/v1/webhooks/.*"}[10m]))) > 2
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Panel API p95 above 2 s (ТЗ §21)"
+
+      - alert: CrmWebhookAuthFailures
+        expr: sum(rate(crm_http_requests_total{route=~"/v1/webhooks/.*", status=~"401|403"}[10m])) > 0.1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Provider webhooks are being rejected (wrong secret / signature or an attack)"
+          runbook: "docs/OPERATIONS.md#whatsapp-вебхук-не-доходит-или-отклоняется"
+
+      - alert: CrmOutboxBacklog
+        expr: crm_outbox_oldest_pending_age_seconds > 300
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "Outbox events wait > 5 min: worker/beat stopped or stuck"
+          runbook: "docs/OPERATIONS.md#очередь-outbox-растёт"
+
+      - alert: CrmOutboxFailedEvents
+        expr: crm_outbox_events{status="failed"} > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value }} outbox events failed permanently (Integrations -> Events -> Retry)"
+
+      - alert: CrmDeadNotifications
+        expr: delta(crm_notifications{status="dead"}[30m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "Notifications moved to DLQ (Telegram/WhatsApp/webhook delivery gave up)"
+          runbook: "docs/OPERATIONS.md#telegram-не-доставляет"
+
+      - alert: CrmNotificationRetriesPiling
+        expr: crm_notifications{status="failed"} > 20
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Many notifications are retrying: a provider is failing"
+
+      - alert: CrmAiErrorRate
+        expr: |
+          crm_ai_run_errors_last_hour >= 5
+          and crm_ai_run_errors_last_hour / clamp_min(crm_ai_runs_last_hour, 1) > 0.2
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "More than 20% of AI turns fail (clients get the fallback message)"
+          runbook: "docs/OPERATIONS.md#ai-провайдер-недоступен"
+
+      - alert: CrmAiKillSwitchOn
+        expr: max(crm_ai_globally_disabled) == 1
+        for: 1h
+        labels: {severity: info}
+        annotations:
+          summary: "AI is globally disabled for more than 1 h - remember to switch it back on"
+
+      - alert: CrmEscalationCallsFailing
+        expr: sum(crm_escalation_calls_last_hour{status=~"failed|busy"}) >= 3
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Admin escalation calls are failing (Twilio credentials/balance/geo permissions)"
+          runbook: "docs/OPERATIONS.md#звонки-эскалации-не-проходят"
+
+      - alert: CrmAdminTasksOverdue
+        expr: crm_admin_tasks_sla_overdue > 0
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value }} admin tasks past SLA (business-side, notify the tenant)"
+
+      - alert: HostDiskFillingUp
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"} < 0.15
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "Less than 15% disk free on {{ $labels.mountpoint }} (PostgreSQL, backups, docker logs)"
+          runbook: "docs/OPERATIONS.md#заканчивается-диск"
