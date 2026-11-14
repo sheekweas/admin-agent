@@ -27,8 +27,9 @@ def test_cross_tenant_denied_and_logged(client, world, other_world, db):
 def test_tenant_settings_defaults_and_patch(client, world):
     r = client.get("/v1/tenant", headers=world.headers())
     assert r.json()["settings"]["escalation"]["repeat_after_min"] == 5
-    r = client.patch("/v1/tenant", headers=world.headers(),
-                     json={"settings": {"escalation": {"repeat_after_min": 3}}})
+    r = client.patch(
+        "/v1/tenant", headers=world.headers(), json={"settings": {"escalation": {"repeat_after_min": 3}}}
+    )
     assert r.status_code == 200
     assert r.json()["settings"]["escalation"]["repeat_after_min"] == 3
     assert r.json()["settings"]["escalation"]["call_after_min"] == 10

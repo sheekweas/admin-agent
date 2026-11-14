@@ -12,3 +12,7 @@ out/
 *.log
 .DS_Store
 *.egg-info/
+
+# QA artefacts (large / environment-specific)
+frontend/qa-screenshots/
+frontend/docs/qa-*-evidence.json

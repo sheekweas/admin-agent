@@ -76,13 +76,26 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         chosen = options[0]
 
     user.last_login = utcnow()
-    audit(db, chosen.tenant_id if chosen else None, "user", str(user.id), "auth.login", "user", str(user.id),
-          ip=request.client.host if request.client else None)
+    audit(
+        db,
+        chosen.tenant_id if chosen else None,
+        "user",
+        str(user.id),
+        "auth.login",
+        "user",
+        str(user.id),
+        ip=request.client.host if request.client else None,
+    )
     db.commit()
-    token = create_access_token(str(user.id), str(chosen.tenant_id) if chosen else None,
-                                chosen.role if chosen else None)
-    return LoginOut(access_token=token, tenant_id=chosen.tenant_id if chosen else None,
-                    role=chosen.role if chosen else None, tenants=options)
+    token = create_access_token(
+        str(user.id), str(chosen.tenant_id) if chosen else None, chosen.role if chosen else None
+    )
+    return LoginOut(
+        access_token=token,
+        tenant_id=chosen.tenant_id if chosen else None,
+        role=chosen.role if chosen else None,
+        tenants=options,
+    )
 
 
 class MeOut(BaseModel):

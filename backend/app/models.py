@@ -3,6 +3,7 @@
 Every tenant-owned row carries tenant_id. All service-layer queries MUST filter by tenant_id
 taken from the authenticated context (never from the request body).
 """
+
 from __future__ import annotations
 
 import enum
@@ -250,8 +251,12 @@ class ScheduleException(TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("staff.id", ondelete="CASCADE"), index=True
     )
     date: Mapped[date] = mapped_column(Date, index=True)
-    kind: Mapped[str] = mapped_column(String(30))  # day_off|vacation|sick|early_leave|late_start|overtime|block
-    start_time: Mapped[time | None] = mapped_column(Time)  # new working start (late_start/overtime) or block start
+    kind: Mapped[str] = mapped_column(
+        String(30)
+    )  # day_off|vacation|sick|early_leave|late_start|overtime|block
+    start_time: Mapped[time | None] = mapped_column(
+        Time
+    )  # new working start (late_start/overtime) or block start
     end_time: Mapped[time | None] = mapped_column(Time)  # new working end (early_leave/overtime) or block end
     reason: Mapped[str] = mapped_column(String(500), default="")
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
@@ -286,7 +291,9 @@ class Contact(TimestampMixin, Base):
     phone_e164: Mapped[str | None] = mapped_column(String(20))
     name: Mapped[str] = mapped_column(String(200), default="")
     language: Mapped[str] = mapped_column(String(5), default="ru")
-    source: Mapped[str] = mapped_column(String(30), default="whatsapp")  # ads|site|qr|repeat|call|whatsapp|manual
+    source: Mapped[str] = mapped_column(
+        String(30), default="whatsapp"
+    )  # ads|site|qr|repeat|call|whatsapp|manual
     tags: Mapped[list] = mapped_column(JSONType, default=list)
     preferences: Mapped[dict] = mapped_column(JSONType, default=dict)  # {"staff_id": ...}
     # {"processing": true, "marketing": false, "outbound_calls": false, "call_recording": false}
@@ -375,7 +382,9 @@ class Message(Base):
     media_url: Mapped[str | None] = mapped_column(String(1000))
     language: Mapped[str | None] = mapped_column(String(5))
     is_internal_note: Mapped[bool] = mapped_column(Boolean, default=False)
-    provider_status: Mapped[str] = mapped_column(String(20), default="received")  # received|queued|sent|delivered|read|failed
+    provider_status: Mapped[str] = mapped_column(
+        String(20), default="received"
+    )  # received|queued|sent|delivered|read|failed
     error: Mapped[str | None] = mapped_column(Text)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -409,7 +418,9 @@ class KnowledgeArticle(TimestampMixin, Base):
     __tablename__ = "knowledge_articles"
     id: Mapped[uuid.UUID] = uuid_pk()
     tenant_id: Mapped[uuid.UUID] = tenant_fk()
-    section: Mapped[str] = mapped_column(String(30), default="faq")  # company|branches|services|prices|staff|promo|rules|faq|scripts
+    section: Mapped[str] = mapped_column(
+        String(30), default="faq"
+    )  # company|branches|services|prices|staff|promo|rules|faq|scripts
     language: Mapped[str] = mapped_column(String(5), default="ru")
     title: Mapped[str] = mapped_column(String(300))
     content: Mapped[str] = mapped_column(Text)
@@ -448,7 +459,9 @@ class Booking(TimestampMixin, Base):
     channel: Mapped[str] = mapped_column(String(20), default="admin")  # whatsapp|admin|phone|api
     source: Mapped[str] = mapped_column(String(30), default="admin")  # ai_agent|admin|integration
     idempotency_key: Mapped[str | None] = mapped_column(String(200))
-    rescheduled_from_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id"))
+    rescheduled_from_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bookings.id")
+    )
     rescheduled_to_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id"))
     cancel_reason: Mapped[str] = mapped_column(String(500), default="")
     comment: Mapped[str] = mapped_column(Text, default="")
@@ -478,7 +491,9 @@ class Visit(TimestampMixin, Base):
     __tablename__ = "visits"
     id: Mapped[uuid.UUID] = uuid_pk()
     tenant_id: Mapped[uuid.UUID] = tenant_fk()
-    booking_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id"), index=True)
+    booking_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bookings.id"), index=True
+    )
     contact_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("contacts.id"), index=True)
     staff_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("staff.id"))
     branch_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("branches.id"))
@@ -491,8 +506,12 @@ class Payment(TimestampMixin, Base):
     __tablename__ = "payments"
     id: Mapped[uuid.UUID] = uuid_pk()
     tenant_id: Mapped[uuid.UUID] = tenant_fk()
-    booking_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id"), index=True)
-    visit_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("visits.id"), index=True)
+    booking_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bookings.id"), index=True
+    )
+    visit_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("visits.id"), index=True
+    )
     contact_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("contacts.id"))
     branch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("branches.id"))
     staff_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("staff.id"))
@@ -516,14 +535,20 @@ class AdminTask(TimestampMixin, Base):
     number: Mapped[int] = mapped_column(Integer)
     tenant_id: Mapped[uuid.UUID] = tenant_fk()
     branch_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("branches.id"))
-    conversation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("conversations.id"))
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id")
+    )
     contact_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("contacts.id"))
-    kind: Mapped[str] = mapped_column(String(30), default="question")  # question|complaint|schedule_conflict|callback|delivery_failed
+    kind: Mapped[str] = mapped_column(
+        String(30), default="question"
+    )  # question|complaint|schedule_conflict|callback|delivery_failed
     question: Mapped[str] = mapped_column(Text)
     priority: Mapped[str] = mapped_column(String(10), default="normal")  # low|normal|high|urgent
     status: Mapped[str] = mapped_column(String(20), default="open", index=True)
     assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    escalation_level: Mapped[int] = mapped_column(Integer, default=0)  # 0 sent, 1 repeat, 2 call, 3 backup call
+    escalation_level: Mapped[int] = mapped_column(
+        Integer, default=0
+    )  # 0 sent, 1 repeat, 2 call, 3 backup call
     next_escalation_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -562,7 +587,9 @@ class Call(TimestampMixin, Base):
     from_number: Mapped[str | None] = mapped_column(String(30))
     admin_task_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("admin_tasks.id"))
     contact_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("contacts.id"))
-    status: Mapped[str] = mapped_column(String(20), default="queued")  # queued|ringing|answered|completed|no_answer|failed|cancelled
+    status: Mapped[str] = mapped_column(
+        String(20), default="queued"
+    )  # queued|ringing|answered|completed|no_answer|failed|cancelled
     dtmf: Mapped[str | None] = mapped_column(String(10))
     provider_ref: Mapped[str | None] = mapped_column(String(200))
     duration_sec: Mapped[int] = mapped_column(Integer, default=0)
@@ -612,6 +639,7 @@ class OutboxEvent(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)  # pending|processed|failed
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # retry backoff (ops)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -627,7 +655,9 @@ class AuditLog(Base):
     entity_id: Mapped[str | None] = mapped_column(String(100))
     payload: Mapped[dict] = mapped_column(JSONType, default=dict)
     ip: Mapped[str | None] = mapped_column(String(64))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class Counter(Base):

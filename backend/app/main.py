@@ -29,7 +29,10 @@ from app.api import (
 )
 from app.config import get_settings
 
-logging.basicConfig(level=logging.INFO, format='{"ts":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}')
+logging.basicConfig(
+    level=logging.INFO,
+    format='{"ts":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}',
+)
 log = logging.getLogger("api")
 
 settings = get_settings()
@@ -55,10 +58,18 @@ async def request_context(request: Request, call_next):
         response = await call_next(request)
     except Exception:
         log.exception("unhandled error rid=%s path=%s", rid, request.url.path)
-        return JSONResponse({"detail": {"code": "INTERNAL", "message": "Internal error", "request_id": rid}}, 500)
+        return JSONResponse(
+            {"detail": {"code": "INTERNAL", "message": "Internal error", "request_id": rid}}, 500
+        )
     response.headers["x-request-id"] = rid
-    log.info("rid=%s %s %s %s %.0fms", rid, request.method, request.url.path, response.status_code,
-             (time.perf_counter() - start) * 1000)
+    log.info(
+        "rid=%s %s %s %s %.0fms",
+        rid,
+        request.method,
+        request.url.path,
+        response.status_code,
+        (time.perf_counter() - start) * 1000,
+    )
     return response
 
 

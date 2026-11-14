@@ -1,0 +1,3 @@
+import {describe,it,expect} from 'vitest';
+import {formatDate,toUTC,money} from './time';
+describe('branch timezone',()=>{it('uses the branch zone across a UTC date boundary',()=>{expect(formatDate('2026-11-13T23:30:00Z','Asia/Almaty')).toBe('14.11.2026 04:30');expect(formatDate('2026-11-13T23:30:00Z','America/New_York')).toBe('13.11.2026 18:30');});it('converts a local calendar drop to UTC',()=>expect(toUTC('2026-11-14T10:00:00','Asia/Almaty')).toBe('2026-11-14T05:00:00.000Z'));it('handles bad dates without breaking the UI',()=>expect(formatDate('invalid')).toBe('—'));it('formats decimal-string money',()=>expect(money('12000.00')).toContain('12'));});

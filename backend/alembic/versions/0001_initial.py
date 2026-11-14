@@ -4,6 +4,7 @@ Revision ID: 0001_initial
 Revises:
 Create Date: 2026-11-14
 """
+
 from alembic import op
 
 import app.models  # noqa: F401
@@ -27,6 +28,9 @@ CONSTRAINTS_SQL = [
         EXCLUDE USING gist (resource_id WITH =, tstzrange(occupied_start, occupied_end, '[)') WITH &&)
         WHERE (resource_id IS NOT NULL AND status IN {ACTIVE})""",
     "ALTER TABLE bookings ADD CONSTRAINT ck_bookings_time CHECK (end_at > start_at AND occupied_end > occupied_start)",
+    # A resource row is one physical unit (one chair/cabinet). "3 chairs" = 3 resource rows; this keeps the
+    # DB-level exclusion constraint above authoritative (no capacity counting races).
+    "ALTER TABLE resources ADD CONSTRAINT ck_resources_unit_capacity CHECK (capacity = 1)",
     "ALTER TABLE payments ADD CONSTRAINT ck_payments_amount CHECK (amount >= 0)",
     "CREATE INDEX IF NOT EXISTS ix_contacts_tenant_name ON contacts (tenant_id, lower(name))",
     "CREATE INDEX IF NOT EXISTS ix_leads_contact_created ON leads (contact_id, created_at)",

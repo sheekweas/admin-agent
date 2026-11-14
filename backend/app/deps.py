@@ -1,4 +1,5 @@
 """Auth context & RBAC. tenant_id ALWAYS comes from the verified token, never from request body."""
+
 from __future__ import annotations
 
 import uuid
@@ -76,7 +77,7 @@ def get_auth(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
     try:
         claims = decode_access_token(authorization.split(" ", 1)[1])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token") from exc
     user = db.get(User, uuid.UUID(claims["sub"]))
     if not user or not user.active:

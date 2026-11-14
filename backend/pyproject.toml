@@ -38,3 +38,18 @@ addopts = "-q"
 [tool.ruff]
 line-length = 110
 target-version = "py312"
+
+[tool.ruff.lint]
+pycodestyle.max-line-length = 120  # long RU/KK message templates
+select = ["E", "F", "W", "B", "UP", "BLE", "RUF", "FURB"]
+# RUF001-003: Cyrillic text is intentional (RU/KK). UP042: (str, Enum) kept for SQLAlchemy/pydantic interop.
+ignore = ["RUF001", "RUF002", "RUF003", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # long literal webhook payloads / dialog fixtures
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency injection idiom: Depends()/Query()/Header() in argument defaults
+extend-immutable-calls = [
+    "fastapi.Depends", "fastapi.Query", "fastapi.Header", "fastapi.Body", "fastapi.Path", "app.deps.require",
+]

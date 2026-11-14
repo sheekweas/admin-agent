@@ -1,4 +1,5 @@
 """Shared helpers: outbox events, counters, phone normalization, time zones, errors."""
+
 from __future__ import annotations
 
 import uuid
@@ -31,6 +32,7 @@ EVENT_TYPES = {
     "admin_task.resolved",
     "payment.confirmed",
     "payment.refunded",
+    "payment.cancelled",
     "message.delivery_failed",
 }
 
@@ -87,8 +89,11 @@ def normalize_phone(raw: str | None, default_region: str = "KZ") -> str | None:
     if not raw:
         return None
     raw = raw.strip()
-    if raw and raw[0].isdigit() and len(raw) >= 11:
-        raw = "+" + raw  # WhatsApp wa_id comes without '+'
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if default_region == "KZ" and not raw.startswith("+") and len(digits) == 11 and digits[0] == "8":
+        raw = "+7" + digits[1:]  # KZ/RU domestic format: 8 707 123 45 67
+    elif raw and raw[0].isdigit() and len(digits) >= 11:
+        raw = "+" + digits  # WhatsApp wa_id comes without '+'
     try:
         num = phonenumbers.parse(raw, default_region)
     except phonenumbers.NumberParseException:

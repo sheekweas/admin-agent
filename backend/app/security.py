@@ -1,4 +1,5 @@
 """Password hashing, JWT, secret encryption, webhook signatures."""
+
 from __future__ import annotations
 
 import base64
@@ -26,7 +27,7 @@ def verify_password(password: str, stored: str) -> bool:
         _, iters, salt_b64, dk_b64 = stored.split("$")
         dk = hashlib.pbkdf2_hmac("sha256", password.encode(), base64.b64decode(salt_b64), int(iters))
         return hmac.compare_digest(dk, base64.b64decode(dk_b64))
-    except Exception:
+    except (ValueError, TypeError):  # malformed hash / bad base64 (binascii.Error is a ValueError)
         return False
 
 

@@ -1,4 +1,5 @@
 """Per-tenant configurable business rules (ТЗ §15: configuration instead of code forks)."""
+
 from __future__ import annotations
 
 import copy
