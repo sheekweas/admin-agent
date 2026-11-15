@@ -1,6 +1,7 @@
 .npm-cache/
 node_modules/
 .next/
+.next-*/
 coverage/
 .env.local
 qa-screenshots/

@@ -158,6 +158,9 @@
      "language": "ru",
      "media_url": null,
      "message_type": "text",
+     "meta": {
+      "kind": "service"
+     },
      "provider_status": "sent",
      "received_at": "<datetime+00:00>",
      "text": "«Мужская стрижка» — 5000 ₸, длительность 60 мин. Хотите записаться?"
@@ -584,6 +587,9 @@
      "language": "ru",
      "media_url": null,
      "message_type": "text",
+     "meta": {
+      "simulated_by": "<uuid>"
+     },
      "provider_status": "received",
      "received_at": "<datetime+00:00>",
      "text": "Здравствуйте"
@@ -598,6 +604,9 @@
      "language": "ru",
      "media_url": null,
      "message_type": "text",
+     "meta": {
+      "kind": "service"
+     },
      "provider_status": "sent",
      "received_at": "<datetime+00:00>",
      "text": "Здравствуйте! Я виртуальный помощник «Test Barbershop». Подскажу цены и адрес, запишу на удобное время. Чем могу помочь?"
@@ -620,6 +629,7 @@
    "language": null,
    "media_url": null,
    "message_type": "note",
+   "meta": {},
    "provider_status": "internal",
    "received_at": "<datetime+00:00>",
    "text": "Note"

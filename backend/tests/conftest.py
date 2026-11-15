@@ -41,7 +41,16 @@ from app.models import (
     Tenant,
     User,
 )
-from app.security import create_access_token, hash_password
+from app.security import hash_password
+
+
+def session_token(db, user_id, tenant_id, role) -> str:
+    """Mint a JWT bound to a fresh server-side session (as POST /v1/auth/login does)."""
+    from app.services.auth_sessions import create_session
+
+    token, _ = create_session(db, user_id, tenant_id, role, ip="testclient", user_agent="pytest")
+    db.commit()
+    return token
 
 
 def _ensure_database() -> None:
@@ -187,7 +196,7 @@ class World:
     def headers(self, user=None) -> dict:
         user = user or self.owner
         m = self.db.query(Membership).filter_by(user_id=user.id, tenant_id=self.tenant.id).one()
-        return {"Authorization": "Bearer " + create_access_token(str(user.id), str(self.tenant.id), m.role)}
+        return {"Authorization": "Bearer " + session_token(self.db, user.id, self.tenant.id, m.role)}
 
 
 @pytest.fixture

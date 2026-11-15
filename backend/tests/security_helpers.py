@@ -77,6 +77,13 @@ def populate(client, db, w: World, tag: str) -> Populated:
         p.add("user", user.id)
     for m in _ok(client.get("/v1/team", headers=h)):
         p.add("membership", m["membership_id"])
+        if m["user_id"] == str(w.analyst.id):
+            p.add("signout_membership", m["membership_id"])  # sign-out target that is not the caller
+    # a spare login of the owner (DELETE /v1/auth/sessions/{id}); the session behind ``h`` stays untouched
+    spare = _ok(client.post("/v1/auth/login", json={"email": w.owner.email, "password": "password123"}))
+    spare_sid = [s for s in _ok(client.get("/v1/auth/sessions", headers=h))["items"] if not s["current"]]
+    assert spare["access_token"] and spare_sid
+    p.add("auth_session", spare_sid[0]["id"])
 
     contact2 = _ok(
         client.post("/v1/contacts", headers=h, json={"name": f"Second {tag}", "phone": "+77075550011"}), 201
@@ -324,6 +331,7 @@ PARAM_KIND = {
     "branch_id": "branch",
     "service_id": "service",
     "membership_id": "membership",
+    "session_id": "auth_session",
     "call_id": "call",
 }
 

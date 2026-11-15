@@ -16,7 +16,7 @@ from app.db import get_db
 from app.deps import AuthContext, require
 from app.models import Call
 from app.services import voice_calls
-from app.services.common import get_or_404
+from app.services.common import DomainError, get_or_404
 
 router = APIRouter()
 
@@ -70,6 +70,8 @@ def list_calls(
         stmt = stmt.where(Call.status.in_([s.strip() for s in status.split(",") if s.strip()]))
     if contact_id:
         stmt = stmt.where(Call.contact_id == contact_id)
+    if (scope := voice_calls.branch_scope_clause(ctx.branch_scope)) is not None:
+        stmt = stmt.where(scope)
     start, end = voice_calls.local_range(db, ctx.tenant_id, date_from, date_to)
     if start is not None:
         stmt = stmt.where(Call.created_at >= start)
@@ -126,4 +128,6 @@ def simulate(body: SimulateCallIn, ctx: CallsWrite, db: DB) -> dict[str, Any]:
 @router.get("/{call_id}", response_model=CallDetail, responses=error_responses(404))
 def get_call(call_id: uuid.UUID, ctx: CallsRead, db: DB) -> dict[str, Any]:
     call = get_or_404(db, Call, call_id, ctx.tenant_id)
+    if not voice_calls.call_visible(db, call, ctx.branch_scope):
+        raise DomainError(404, "NOT_FOUND", "Call not found")
     return voice_calls.call_detail(db, call, mask=_mask(ctx))

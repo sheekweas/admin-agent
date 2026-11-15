@@ -18,8 +18,8 @@ from app.config import get_settings
 from app.deps import PERMISSIONS
 from app.main import app
 from app.models import AuditLog, Contact, Membership, User
-from app.security import create_access_token
 from tests.booking_helpers import future_day
+from tests.conftest import session_token
 from tests.security_helpers import (
     PARAM_KIND,
     Populated,
@@ -61,6 +61,8 @@ def _event_candidates(p: Populated) -> list[str]:
 def _param_values(r: RouteInfo, p: Populated) -> list[dict[str, str]]:
     if r.path_params == ["event_id"]:
         return [{"event_id": v} for v in _event_candidates(p)]
+    if r.path.endswith("/sign-out"):  # signing the owner out would also end the spare session used below
+        return [{"membership_id": p.one("signout_membership")}]
     if "exception_id" in r.path_params:  # the exception belongs to barber2
         return [{"staff_id": p.ids["staff"][1], "exception_id": p.one("exception")}]
     return [{name: p.one(PARAM_KIND[name]) for name in r.path_params}]
@@ -271,7 +273,7 @@ def test_tenant_switch_header_and_forged_tokens(client, db, tenant_a, tenant_b):
     )
     assert denied is not None and denied.actor_id == str(a.owner.id)
     # a correctly signed token naming B's tenant still needs a membership
-    tok = create_access_token(str(a.owner.id), str(b.tenant.id), "owner")
+    tok = session_token(db, a.owner.id, b.tenant.id, "owner")
     assert client.get("/v1/bookings", headers={"Authorization": f"Bearer {tok}"}).status_code == 403
 
     now = datetime.now(UTC)
@@ -297,7 +299,14 @@ def test_deactivated_membership_loses_access(client, db, tenant_a):
     m = db.scalar(select(Membership).where(Membership.user_id == w.admin.id))
     m.active = False
     db.commit()
-    assert client.get("/v1/bookings", headers=h).status_code == 403
+    # v1.1.0: deactivating the membership also revokes the member's sessions of this tenant -> 401
+    assert client.get("/v1/bookings", headers=h).status_code == 401
+    # a still-active session not bound to this tenant is refused by the per-request membership check
+    other = {
+        "Authorization": f"Bearer {session_token(db, w.admin.id, None, None)}",
+        "X-Tenant-Id": str(w.tenant.id),
+    }
+    assert client.get("/v1/bookings", headers=other).status_code == 403
 
 
 # ---------------------------------------------------------------- RBAC matrix
@@ -306,7 +315,16 @@ _MANUAL_PERMS = {  # routes that check permissions in the handler instead of req
     ("POST", "/v1/payments/{payment_id}/refund"): ["finance.read", "finance.write"],
     ("POST", "/v1/payments/{payment_id}/cancel"): ["finance.read", "finance.write"],
 }
-_AUTH_ONLY = {("GET", "/v1/auth/me"), ("GET", "/v1/tenant")}
+_AUTH_ONLY = {
+    ("GET", "/v1/auth/me"),
+    ("GET", "/v1/tenant"),
+    # own sessions / password (v1.1.0): every authenticated user, scoped to ctx.user
+    ("POST", "/v1/auth/logout"),
+    ("POST", "/v1/auth/logout-all"),
+    ("GET", "/v1/auth/sessions"),
+    ("DELETE", "/v1/auth/sessions/{session_id}"),
+    ("POST", "/v1/auth/change-password"),
+}
 
 
 def _required(r: RouteInfo) -> list[str]:
@@ -384,3 +402,74 @@ def test_unknown_ids_are_indistinguishable_from_foreign(client, tenant_a, tenant
     missing = client.get(f"/v1/bookings/{uuid.uuid4()}", headers=h)
     assert foreign.status_code == missing.status_code == 404
     assert foreign.json() == missing.json()
+
+
+# ---------------------------------------------------------------- branch scope: calls (v1.1)
+def test_calls_respect_branch_scope_in_list_detail_and_report(client, db, world):
+    """A branch-scoped admin does not see calls linked to a contact / booking / task of another branch."""
+    from app.models import AdminTask, Booking, Branch, Call
+
+    w = world
+    b2 = Branch(tenant_id=w.tenant.id, name="Second", timezone="Asia/Almaty")
+    db.add(b2)
+    db.flush()
+    c_in = Contact(tenant_id=w.tenant.id, name="In", phone_e164="+77015551001", branch_id=w.branch.id)
+    c_out = Contact(tenant_id=w.tenant.id, name="Out", phone_e164="+77015551002", branch_id=b2.id)
+    c_none = Contact(tenant_id=w.tenant.id, name="Any", phone_e164="+77015551003")
+    db.add_all([c_in, c_out, c_none])
+    db.flush()
+    start = datetime.now(UTC).replace(microsecond=0) + timedelta(days=5)
+    booking = Booking(
+        number=900,
+        tenant_id=w.tenant.id,
+        branch_id=b2.id,
+        contact_id=c_none.id,
+        staff_id=w.barber2.id,
+        start_at=start,
+        end_at=start + timedelta(hours=1),
+        occupied_start=start,
+        occupied_end=start + timedelta(hours=1),
+        status="confirmed",
+    )
+    task = AdminTask(tenant_id=w.tenant.id, number=900, question="Q", branch_id=b2.id)
+    db.add_all([booking, task])
+    db.flush()
+
+    def call(**links) -> str:
+        c = Call(
+            tenant_id=w.tenant.id,
+            direction="in",
+            purpose="client_ai",
+            to_number="+77270000001",
+            status="completed",
+            started_at=datetime.now(UTC),
+            **links,
+        )
+        db.add(c)
+        db.flush()
+        return str(c.id)
+
+    visible = {call(contact_id=c_in.id), call(contact_id=c_none.id), call()}
+    hidden = {call(contact_id=c_out.id), call(contact_id=c_none.id, booking_id=booking.id), call(admin_task_id=task.id)}
+    m = db.scalar(select(Membership).where(Membership.user_id == w.admin.id))
+    m.branch_scope = [str(w.branch.id)]
+    db.commit()
+    admin, owner = w.headers(w.admin), w.headers()
+
+    listing = client.get("/v1/calls", headers=admin).json()
+    assert {i["id"] for i in listing["items"]} == visible and listing["total"] == 3
+    full = client.get("/v1/calls", headers=owner).json()
+    assert {i["id"] for i in full["items"]} == visible | hidden
+    # filtering by an out-of-scope contact does not widen the result
+    assert client.get("/v1/calls", headers=admin, params={"contact_id": str(c_out.id)}).json()["total"] == 0
+
+    for cid in visible:
+        assert client.get(f"/v1/calls/{cid}", headers=admin).status_code == 200
+    unknown = client.get(f"/v1/calls/{uuid.uuid4()}", headers=admin)
+    for cid in hidden:
+        r = client.get(f"/v1/calls/{cid}", headers=admin)
+        assert r.status_code == 404 and r.json() == unknown.json()  # indistinguishable from a missing call
+        assert client.get(f"/v1/calls/{cid}", headers=owner).status_code == 200
+
+    assert client.get("/v1/reports/voice", headers=admin).json()["calls"] == 3
+    assert client.get("/v1/reports/voice", headers=owner).json()["calls"] == 6

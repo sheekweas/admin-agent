@@ -9,8 +9,22 @@ List endpoints return `{"items": [...], "total": N}` and accept `limit` (default
 ## Auth / tenant (done)
 - `POST /v1/auth/login {email,password,tenant_id?}` → `{access_token, tenant_id, role, tenants:[{tenant_id,name,role}]}`
 - `GET /v1/auth/me` → `{user_id,email,full_name,ui_language,tenant_id,tenant_name,role,staff_id,branch_scope,permissions[]}`
+- Sessions (v1.1.0). Every token is bound to a server-side session (JWT claim `sid`); a token whose session was revoked or
+  expired, or a v1.0 token without `sid`, gets **401** on every endpoint → the UI logs the user out.
+  - `POST /v1/auth/logout` → 204 (ends the current session)
+  - `POST /v1/auth/logout-all` → `{"revoked": N}` (all sessions of the user, including the current one)
+  - `GET /v1/auth/sessions` → `{"items":[{id,created_at,last_seen_at,expires_at,ip,user_agent,current}],"total":N}` — active
+    sessions of the current user, most recently seen first; `current=true` marks the caller's session. `last_seen_at` is
+    refreshed at most every 5 minutes.
+  - `DELETE /v1/auth/sessions/{id}` → 204; 404 `NOT_FOUND` if it is not an active session of the current user
+  - `POST /v1/auth/change-password {current_password,new_password}` → `{"revoked_other_sessions": N}`; the current session stays
+    valid. Errors (in `detail.code`): 400 `INVALID_CURRENT_PASSWORD`, 400 `WEAK_PASSWORD` (min 10 chars, not only digits);
+    429 after 10 wrong current passwords in 5 min.
 - `GET/PATCH /v1/tenant` → `{id,name,niche,plan,default_language,currency,settings}`
 - `GET/POST /v1/team`, `PATCH /v1/team/{membership_id}` (members: email, full_name, phone_e164, telegram_chat_id, role, is_escalation_primary/backup)
+- `POST /v1/team/{membership_id}/sign-out` (perm `team.manage`: owner, admin) → `{"revoked": N}` — ends all sessions of that member
+  (the caller's own current session is kept); 404 for another organization's membership; 403 `OWNER_PROTECTED` when an admin
+  targets an owner. `PATCH /v1/team/{id} {"active": false}` also ends the member's sessions in this organization.
 
 ## Catalogue & staff (booking agent)
 - `GET/POST /v1/branches`, `PATCH /v1/branches/{id}` — `{id,name,address,timezone,contacts,active}`
@@ -37,7 +51,13 @@ List endpoints return `{"items": [...], "total": N}` and accept `limit` (default
 
 ## Inbox & AI (AI agent)
 - `GET /v1/conversations?mode&status&q` → items: `{id,contact:{id,name,phone_e164},channel,mode,status,language,last_message:{text,author,at},unread_count,open_task_id}`
-- `GET /v1/conversations/{id}/messages` → `[{id,direction,author,message_type,text,media_url,provider_status,is_internal_note,received_at}]`
+- `GET /v1/conversations/{id}/messages` → `[{id,direction,author,message_type,text,media_url,provider_status,is_internal_note,received_at,author_user_id,error,language,meta}]`
+  - `meta` (v1.1) is the message's channel metadata as stored. WhatsApp voice notes (`message_type:"audio"`) carry
+    `{"transcribed": bool, "stt": "openai_compatible"|"mock"|"none", "stt_confidence": 0–1|null, "stt_language": "ru"|"kk"|null,
+    "stt_error": str|null}`; `"stt_low_confidence": true` when the transcript was empty or below
+    `settings.voice.low_confidence_threshold` — the AI then asked the client (RU/KK) to repeat or type instead of answering;
+    the third unintelligible note in a row, or any STT error (`stt_error` set, `transcribed:false`), hands the dialogue
+    to a human (fallback message + admin task, mode `waiting_admin`).
 - `POST /v1/conversations/{id}/messages {text, internal_note?:bool}` — human reply (switches to human mode automatically)
 - `POST /v1/conversations/{id}/takeover` ; `POST /v1/conversations/{id}/release` (return to AI) ; `POST /v1/conversations/{id}/read`
 - `GET/POST /v1/knowledge`, `PATCH /v1/knowledge/{id}`, `POST /v1/knowledge/{id}/publish`, `POST /v1/knowledge/{id}/archive`
@@ -52,6 +72,11 @@ List endpoints return `{"items": [...], "total": N}` and accept `limit` (default
 - `GET /v1/reports/overview?date_from&date_to&branch_id&staff_id&service_id&source` → `{kpi:{revenue,refunds,net_revenue,bookings,visits,no_shows,cancellations,new_leads,conversion_to_booking,conversion_to_visit,no_show_rate,avg_check,ai_resolution_rate,open_tasks,unpaid_completed}, revenue_by_day:[{date,amount}], bookings_by_day:[{date,bookings,visits}], top_services:[{service_id,title,revenue,count}], top_staff:[{staff_id,name,revenue,visits,utilization}], lead_sources:[{source,count}], funnel:[{stage,count}], load_by_hour:[{hour,bookings}], cancellations_by_day:[{date,cancelled,no_show}]}`
 - `GET /v1/reports/export.csv?...` ; `GET /v1/reports/export.xlsx?...`
 - `GET /v1/integrations` ; `PUT /v1/integrations/{kind}` (kind: whatsapp|telegram|voice|zapier) `{config, secrets, enabled}` ; `POST /v1/integrations/{kind}/test`
+- Speech-to-text (v1.1, platform-level env config `STT_PROVIDER`/`STT_BASE_URL`/`STT_API_KEY`/`STT_MODEL`/`STT_TIMEOUT_SEC`):
+  `GET /v1/integrations/stt` (`integrations.read`) → `{provider:"openai_compatible"|"mock"|"none", configured:bool, model|null}`
+  (the key is never returned); `POST /v1/integrations/stt/test` (`integrations.write` = owner; the contract's
+  "integrations.manage") → `{ok, provider, latency_ms, error|null}` — transcribes a bundled 1 s silent WAV with the
+  active provider (mock → ok; audited as `integration.test` entity `stt`).
 - `GET/POST /v1/integrations/webhooks`, `DELETE /v1/integrations/webhooks/{id}` ; `GET /v1/integrations/events?status` ; `POST /v1/integrations/events/{id}/retry`
 - `GET /v1/audit?entity&entity_id&action&date_from&date_to`
 - Webhooks: `POST /v1/webhooks/telegram/{tenant_id}` ; `POST /v1/webhooks/voice/{provider}/status`, `/gather`
@@ -73,6 +98,9 @@ analyst role. Datetimes ISO with offset; rates 0–100.
 - `GET /v1/calls/{id}` → item + `transcript:[{speaker:"client"|"ai"|"admin"|"system", text, at, confidence|null}]`,
   `metrics:{first_response_ms|null, turns, recognition_retries, transferred_to_human, booking_created}`.
   Transcript is `[]` after `settings.voice.transcript_retention_days`. Other organisations' ids → 404.
+- Branch scope (v1.1): for a member with a `branch_scope`, list / detail / `GET /v1/reports/voice` hide calls linked to a
+  contact, booking or admin task of a branch outside the scope (detail → 404, same body as an unknown id). Calls
+  without such links, or linked to branch-less records, stay visible — the rule used for contacts and conversations.
 - `POST /v1/calls/outbound {contact_id, purpose:"booking_confirmation"|"reminder"|"callback"|"reschedule",
   booking_id?, admin_task_id?}` → **201** call item (status `ringing`/`queued`; a provider error is returned as
   status `failed`). `booking_id` defaults to the client's next upcoming booking (required except for `callback`);
@@ -96,3 +124,11 @@ analyst role. Datetimes ISO with offset; rates 0–100.
 - Provider webhooks (Twilio, `X-Twilio-Signature` required, fail closed): `POST /v1/webhooks/voice/twilio/inbound`
   (number's "A call comes in"), `/status` (number's status callback; `call_id` optional — matched by `CallSid`),
   `/turn?call_id&seq`, `/answer?call_id`, `/dial?call_id`, `/recording?call_id`, `/gather?call_id` (admin IVR).
+- Recording privacy (v1.1): a `/recording` callback for a call without recording consent — the call was not set up
+  for recording, `recording_enabled` was turned off, or the client refused (`consent_flags.call_recording=false`;
+  outbound calls need it `true`) — deletes the recording at the provider (`DELETE …/Recordings/{RecordingSid}.json`)
+  and never stores its URL; audit `call.recording_deleted`. If the deletion fails, `call.meta.recording_delete_failed`
+  keeps the SID for manual removal.
+- Retention (worker `ops.voice_retention`, hourly): besides call transcripts/recordings, `ai_runs` older than the
+  tenant's `transcript_retention_days` lose tool inputs/results and `reply_text` (ids, timings, token counts, model,
+  tool names and ok/error flags are kept; each tool call gets `redacted:true`).

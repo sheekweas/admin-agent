@@ -120,6 +120,19 @@ class IntegrationTestOut(BaseModel):
     detail: str
 
 
+class STTStatusOut(BaseModel):
+    provider: Literal["openai_compatible", "mock", "none"]
+    configured: bool = Field(description="False when STT_PROVIDER=none or STT_BASE_URL is missing.")
+    model: str | None
+
+
+class STTTestOut(BaseModel):
+    ok: bool
+    provider: str
+    latency_ms: int
+    error: str | None
+
+
 class WebhookSubscriptionOut(BaseModel):
     id: uuid.UUID
     url: str
@@ -335,6 +348,12 @@ class MessageOut(BaseModel):
     author_user_id: uuid.UUID | None
     error: str | None
     language: str | None
+    meta: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Channel metadata. Voice notes: transcribed (bool), stt (provider), stt_confidence "
+        "(0–1|null), stt_language (ru|kk|null), stt_error (str|null), stt_low_confidence (true when the "
+        "client was asked to repeat).",
+    )
 
 
 class MessageList(BaseModel):

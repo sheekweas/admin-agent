@@ -24,10 +24,15 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    event,
     func,
+    or_,
+    update,
 )
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Session as OrmSession
 
 from app.db import Base
 
@@ -681,3 +686,49 @@ class Counter(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     name: Mapped[str] = mapped_column(String(30), primary_key=True)
     value: Mapped[int] = mapped_column(Integer, default=0)
+
+
+# ---------------------------------------------------------------- auth sessions (v1.1.0, migration 0003)
+class AuthSession(Base):
+    """Server-side login session; the JWT carries its id as ``sid`` and is valid only while the row is active
+    (not revoked, not expired). Looked up by primary key on every authenticated request."""
+
+    __tablename__ = "auth_sessions"
+    id: Mapped[uuid.UUID] = uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    tenant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(300))
+
+
+def _revoke_sessions_on_deactivation(session, flush_context) -> None:
+    """Deactivating a user revokes all their sessions; deactivating a membership revokes that user's sessions
+    issued for that tenant. Runs for every code path (API, CLI, scripts) that flips ``active`` to False."""
+    table = AuthSession.__table__
+    conds = []
+    for obj in session.dirty:
+        if not isinstance(obj, User | Membership):
+            continue
+        hist = sa_inspect(obj).attrs.active.history
+        if not hist.added or hist.added[0] is not False:
+            continue
+        if isinstance(obj, User):
+            conds.append(table.c.user_id == obj.id)
+        else:
+            conds.append((table.c.user_id == obj.user_id) & (table.c.tenant_id == obj.tenant_id))
+    if conds:
+        session.connection().execute(
+            update(table).where(table.c.revoked_at.is_(None), or_(*conds)).values(revoked_at=func.now())
+        )
+
+
+if not event.contains(OrmSession, "after_flush", _revoke_sessions_on_deactivation):
+    event.listen(OrmSession, "after_flush", _revoke_sessions_on_deactivation)

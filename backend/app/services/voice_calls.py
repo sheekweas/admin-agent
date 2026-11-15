@@ -25,7 +25,8 @@ import uuid
 from datetime import date, datetime, time as dtime, timedelta
 from typing import Any
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import cast, exists, func, or_, select, update
+from sqlalchemy.dialects.postgresql import JSONPATH
 from sqlalchemy.orm import Session
 
 from app.channels.voice import (
@@ -41,6 +42,7 @@ from app.channels.voice import (
 from app.config import get_settings
 from app.models import (
     AdminTask,
+    AIRun,
     Booking,
     Call,
     Contact,
@@ -979,14 +981,53 @@ def apply_client_status(db: Session, call: Call, form: dict[str, str], now: date
         call.status = status
 
 
-def apply_recording(call: Call, form: dict[str, str]) -> bool:
-    """Store the recording URL only when the call was recorded with consent (§20.1)."""
+def recording_allowed(db: Session, call: Call) -> bool:
+    """The call was set up for recording (consent at call start) and nothing revoked it since: recording is
+    still enabled for the tenant and the client has not refused (``consent_flags.call_recording`` False)."""
     if not (call.meta or {}).get("recording"):
+        return False
+    if not voice_settings(db, call.tenant_id).get("recording_enabled"):
+        return False
+    contact = db.get(Contact, call.contact_id) if call.contact_id else None
+    flags = (contact.consent_flags or {}) if contact else {}
+    if flags.get("call_recording") is False:
+        return False
+    return not (call.direction == "out" and flags.get("call_recording") is not True)
+
+
+def apply_recording(db: Session, call: Call, form: dict[str, str]) -> bool:
+    """Store the recording URL only when the call was recorded with consent (§20.1). A recording that exists
+    at the provider without consent (or with recording disabled) is deleted there right away."""
+    sid = (form.get("RecordingSid") or "").strip()[:200]
+    if not recording_allowed(db, call):
+        if sid:
+            _delete_recording(db, call, sid)
         return False
     if form.get("RecordingStatus", "completed") != "completed" or not form.get("RecordingUrl"):
         return False
     call.recording_url = form["RecordingUrl"][:1000]
     return True
+
+
+def _delete_recording(db: Session, call: Call, sid: str) -> None:
+    try:
+        get_voice_provider(db, call.tenant_id).delete_recording(sid)
+        _meta(call, recording_deleted=sid)
+        _append(call, "system", "recording deleted (no consent)")
+        audit(
+            db,
+            call.tenant_id,
+            "system",
+            None,
+            "call.recording_deleted",
+            "call",
+            str(call.id),
+            {"recording_sid": sid, "reason": "no_consent"},
+        )
+    except (VoiceError, VoiceNotConfigured) as exc:
+        # Keep the sid so an operator can remove it manually; never store the recording URL.
+        log.error("could not delete non-consented recording call=%s sid=%s err=%s", call.id, sid, exc)
+        _meta(call, recording_delete_failed=sid)
 
 
 # ====================================================================== simulator (mock mode)
@@ -1109,10 +1150,48 @@ def local_range(db: Session, tenant_id: uuid.UUID, date_from: date | None, date_
     return start, end
 
 
-def voice_report(db: Session, tenant_id: uuid.UUID, date_from: date | None, date_to: date | None) -> dict:
-    """ТЗ §13.4 metrics over client calls (admin escalation IVR calls excluded). Rates are 0–100."""
+def branch_scope_clause(branch_scope: list[str] | None):
+    """SQL condition hiding calls linked to a contact, booking or admin task of a branch outside
+    ``branch_scope`` (membership scope; [] / None = all branches). Unlinked / branch-less records stay visible,
+    the same rule as contacts and conversations."""
+    if not branch_scope:
+        return None
+    scope = [uuid.UUID(str(b)) for b in branch_scope]
+    return ~or_(
+        exists().where(
+            Contact.id == Call.contact_id, Contact.branch_id.is_not(None), Contact.branch_id.not_in(scope)
+        ),
+        exists().where(
+            Booking.id == Call.booking_id, Booking.branch_id.is_not(None), Booking.branch_id.not_in(scope)
+        ),
+        exists().where(
+            AdminTask.id == Call.admin_task_id,
+            AdminTask.branch_id.is_not(None),
+            AdminTask.branch_id.not_in(scope),
+        ),
+    )
+
+
+def call_visible(db: Session, call: Call, branch_scope: list[str] | None) -> bool:
+    clause = branch_scope_clause(branch_scope)
+    if clause is None:
+        return True
+    return db.scalar(select(Call.id).where(Call.id == call.id, clause)) is not None
+
+
+def voice_report(
+    db: Session,
+    tenant_id: uuid.UUID,
+    date_from: date | None,
+    date_to: date | None,
+    branch_scope: list[str] | None = None,
+) -> dict:
+    """ТЗ §13.4 metrics over client calls (admin escalation IVR calls excluded). Rates are 0–100.
+    With a ``branch_scope`` only calls visible to that scope are counted."""
     start, end = local_range(db, tenant_id, date_from, date_to)
     q = select(Call).where(Call.tenant_id == tenant_id, Call.purpose.in_(CLIENT_PURPOSES))
+    if (scope := branch_scope_clause(branch_scope)) is not None:
+        q = q.where(scope)
     if start is not None:
         q = q.where(Call.created_at >= start)
     if end is not None:
@@ -1188,4 +1267,47 @@ def purge_expired_transcripts(db: Session, now: datetime | None = None) -> int:
             )
         purged += len(calls)
         db.commit()
+    redact_expired_ai_runs(db, now)
     return purged
+
+
+_AI_RUN_KEEP_KEYS = ("name", "ok", "error", "ms", "rolled_back")
+
+
+def redact_expired_ai_runs(db: Session, now: datetime | None = None, batch: int = 500) -> int:
+    """ТЗ §20.1: AI audit records older than the tenant's transcript retention period lose their content —
+    tool inputs/results and the reply text. Ids, timings, token counts, model/prompt version, tool names and
+    outcome flags stay for reports. Idempotent (redacted runs carry ``redacted: true`` per tool call). Commits."""
+    now = now or utcnow()
+    redacted = 0
+    for tenant in db.scalars(select(Tenant).where(exists().where(AIRun.tenant_id == Tenant.id))).all():
+        days = int((merged_settings(tenant).get("voice") or {}).get("transcript_retention_days") or 0)
+        if days <= 0:
+            continue
+        cutoff = now - timedelta(days=days)
+        pending = or_(
+            AIRun.reply_text != "",
+            func.jsonb_path_exists(
+                AIRun.tool_calls, cast("$[*] ? (exists(@.input) || exists(@.result))", JSONPATH)
+            ),
+        )
+        while True:
+            runs = db.scalars(
+                select(AIRun)
+                .where(AIRun.tenant_id == tenant.id, AIRun.created_at < cutoff, pending)
+                .limit(batch)
+            ).all()
+            if not runs:
+                break
+            for run in runs:
+                run.tool_calls = [
+                    {**{k: c.get(k) for k in _AI_RUN_KEEP_KEYS if k in c}, "redacted": True}
+                    for c in (run.tool_calls or [])
+                    if isinstance(c, dict)
+                ]
+                run.reply_text = ""
+            redacted += len(runs)
+            db.commit()
+    if redacted:
+        log.info("ai_runs redacted: %d", redacted)
+    return redacted

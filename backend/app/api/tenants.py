@@ -14,6 +14,7 @@ from app.deps import AuthContext, get_auth, require
 from app.models import Branch, Membership, Tenant, User
 from app.security import hash_password, verify_password
 from app.services.audit import audit
+from app.services.auth_sessions import revoke_user_sessions
 from app.services.common import DomainError, get_or_404
 from app.services.tenant_settings import DEFAULT_SETTINGS, merged_settings
 
@@ -260,3 +261,35 @@ def patch_member(
     )
     db.commit()
     return _member_out(m)
+
+
+class SignOutOut(BaseModel):
+    revoked: int
+
+
+@router.post("/team/{membership_id}/sign-out", response_model=SignOutOut)
+def sign_out_member(
+    membership_id: uuid.UUID,
+    ctx: AuthContext = Depends(require("team.manage")),
+    db: Session = Depends(get_db),
+):
+    """Revoke every active session of this member. A session is a login (the UI switches organizations with
+    X-Tenant-Id on the same token), so all of the user's sessions end, not only those started in this tenant.
+    The caller's own current session is kept (signing yourself out ends your other devices)."""
+    m = get_or_404(db, Membership, membership_id, ctx.tenant_id)
+    if m.role == "owner" and ctx.role != "owner":
+        raise DomainError(403, "OWNER_PROTECTED", "Only an owner can sign out an owner")
+    n = revoke_user_sessions(db, m.user_id, except_id=ctx.session_id)
+    audit(
+        db,
+        ctx.tenant_id,
+        "user",
+        str(ctx.user.id),
+        "auth.user_signed_out",
+        "membership",
+        str(m.id),
+        {"user_id": str(m.user_id), "revoked": n},
+        ip=ctx.ip,
+    )
+    db.commit()
+    return SignOutOut(revoked=n)

@@ -32,6 +32,7 @@ beforeEach(() => {
       return Response.json({ permissions: ['conversations.read', 'conversations.write'], tenant_id: 'tenant' });
     }
     if (path === 'branches') return Response.json({ items: [] });
+    if (path === 'tenant') return Response.json({settings:{voice:{low_confidence_threshold:0.7}}});
     if (path?.startsWith('conversations?')) return Response.json({ items: conversations });
     if (path?.endsWith('/messages')) {
       if (init?.method === 'POST') {

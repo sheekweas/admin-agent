@@ -32,13 +32,17 @@ def verify_password(password: str, stored: str) -> bool:
         return False
 
 
-def create_access_token(user_id: str, tenant_id: str | None, role: str | None) -> str:
+def create_access_token(
+    user_id: str, tenant_id: str | None, role: str | None, *, sid: str, now: datetime | None = None
+) -> str:
+    """JWT bound to server-side session ``sid`` (app.services.auth_sessions.create_session mints these)."""
     s = get_settings()
-    now = datetime.now(UTC)
+    now = now or datetime.now(UTC)
     payload = {
         "sub": user_id,
         "tid": tenant_id,
         "role": role,
+        "sid": sid,
         "iat": now,
         "exp": now + timedelta(minutes=s.jwt_ttl_minutes),
     }
@@ -47,7 +51,10 @@ def create_access_token(user_id: str, tenant_id: str | None, role: str | None) -
 
 def decode_access_token(token: str) -> dict:
     return jwt.decode(
-        token, get_settings().jwt_secret, algorithms=["HS256"], options={"require": ["exp", "iat", "sub"]}
+        token,
+        get_settings().jwt_secret,
+        algorithms=["HS256"],
+        options={"require": ["exp", "iat", "sub", "sid"]},  # v1.0 tokens without "sid" are rejected
     )
 
 

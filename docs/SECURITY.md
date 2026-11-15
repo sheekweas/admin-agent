@@ -29,6 +29,21 @@ Out of scope here (infrastructure): TLS termination, WAF, backups encryption, DB
 - Shared user accounts: an existing account is linked to an organization only with that account's password, and a user that also
   belongs to another organization cannot have their profile (phone, Telegram chat id, name) changed by this organization's owner.
 
+**Sessions & token revocation** (v1.1.0, `app/services/auth_sessions.py`, table `auth_sessions`, migration `0003_auth_sessions`)
+- `POST /v1/auth/login` creates a session row (user, tenant, ip, user agent ≤ 300 chars, `expires_at` = token expiry) and the JWT
+  carries its id as claim `sid`. `app/deps.py:get_auth` rejects with 401 any token whose session is missing, revoked, expired or
+  belongs to another user (primary-key lookup per request). Tokens issued by v1.0 (no `sid`) are rejected → users log in once.
+  `last_seen_at` is written at most once per 5 minutes per session.
+- Revocation (`revoked_at`): `POST /v1/auth/logout` (current), `POST /v1/auth/logout-all` (all of the user's), `DELETE
+  /v1/auth/sessions/{id}` (own sessions only; anyone else's id → 404), `POST /v1/auth/change-password` (all *other* sessions;
+  min 10 chars, not only digits; 10 wrong current passwords / 5 min → 429), `POST /v1/team/{membership_id}/sign-out` (perm
+  `team.manage` = owner/admin, same tenant; an admin cannot sign out an owner; the caller's current session is kept).
+  Deactivating a user (`users.active=false`) revokes all their sessions; deactivating a membership revokes the user's sessions
+  started in that organization — done by an ORM `after_flush` hook in `app/models.py`, so every code path (API, CLI, scripts) is covered.
+- Audit: `auth.login` (with `session_id`), `auth.logout`, `auth.logout_all`, `auth.session_revoked`, `auth.password_changed`,
+  `auth.user_signed_out`. The worker task `ops.purge_auth_sessions` (hourly) deletes sessions expired or revoked > 30 days ago.
+- Tests: `tests/test_auth_sessions.py`; the IDOR sweep covers `DELETE /v1/auth/sessions/{session_id}` and the sign-out route.
+
 **Webhook signatures & replay** (`app/api/webhooks_*.py`)
 - WhatsApp: platform app secret, else per-tenant `app_secret`; with per-tenant secrets *every* addressed `phone_number_id` must verify
   with its own tenant's secret; an empty secret never verifies. Duplicate deliveries are no-ops (unique `provider_message_id`).
@@ -118,11 +133,17 @@ Out of scope here (infrastructure): TLS termination, WAF, backups encryption, DB
 
 ## 5. Known limitations / follow-ups
 
-- JWTs are stateless (12 h TTL): deactivating a membership takes effect immediately (checked per request), but a stolen token of an
-  active user stays valid until expiry; there is no refresh/revocation list yet.
+- ~~JWTs are stateless, a stolen token stays valid until expiry~~ — fixed in v1.1.0: server-side sessions (see §2 "Sessions &
+  token revocation"); logout, logout-all, ending a session, a password change, deactivation and an admin sign-out revoke tokens
+  immediately. Remaining: there is no refresh token (the 12 h `JWT_TTL_MINUTES` still bounds a session); a session is a login of
+  the *user*, not of one organization (the UI switches organizations with `X-Tenant-Id` on the same token), so an admin
+  "sign out user" ends all of that user's sessions, including ones used in their other organizations.
 - ~~`GET /v1/team` shows colleagues' phones to all roles~~ — fixed in v0.3.0: only owner/admin see colleagues' phones/Telegram ids.
 - Login rate limiting is per IP; distributed credential stuffing needs an upstream WAF / captcha.
-- Voice: a recording that Twilio produced for a call without consent is not stored, but is not deleted at Twilio either (delete
-  via the Twilio console / API, or keep `recording_enabled=false`). `ai_runs` keep tool inputs (e.g. the caller's name) beyond the
-  transcript retention period.
+- ~~Voice: a non-consented Twilio recording is not deleted at Twilio; `ai_runs` keep tool inputs beyond the transcript
+  retention period~~ — fixed in v1.1.0: such recordings are deleted via the Twilio REST API (`call.recording_deleted` audit;
+  a failed deletion leaves `call.meta.recording_delete_failed` for manual removal), and `ops.voice_retention` redacts
+  `ai_runs` tool inputs/results and reply text after `transcript_retention_days`. Remaining: recordings of *consented*
+  calls are only unlinked (URL erased) after the retention period, not deleted at Twilio — set a Twilio retention policy.
+- `/v1/calls` respects the member's `branch_scope` since v1.1.0 (calls linked to a contact/booking/task of another branch).
 - Telegram webhook answers 401 (not 403) to a wrong secret token — kept for backward compatibility with existing clients/tests.

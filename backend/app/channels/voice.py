@@ -27,6 +27,7 @@ import base64
 import hashlib
 import hmac
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -222,6 +223,10 @@ class VoiceProvider(Protocol):
 
     def start_recording(self, provider_ref: str, *, call_id: uuid.UUID) -> None: ...
 
+    def delete_recording(self, recording_sid: str) -> None:
+        """Remove a recording at the provider (recordings made without consent, §20.1)."""
+        ...
+
     def response(self) -> VoiceResponse: ...
 
 
@@ -263,6 +268,9 @@ class MockVoice:
 
     def start_recording(self, provider_ref: str, *, call_id: uuid.UUID) -> None:
         MOCK_CALLS.append({"action": "record", "provider_ref": provider_ref, "call_id": str(call_id)})
+
+    def delete_recording(self, recording_sid: str) -> None:
+        MOCK_CALLS.append({"action": "delete_recording", "recording_sid": recording_sid})
 
     def response(self) -> VoiceResponse:
         return VoiceResponse()
@@ -338,6 +346,21 @@ class TwilioVoice:
             },
         )
 
+    def delete_recording(self, recording_sid: str) -> None:
+        """DELETE /Recordings/{sid}.json (204). An already-deleted recording (404) counts as done."""
+        if not re.fullmatch(r"RE[0-9a-fA-F]{32}", recording_sid or ""):
+            raise VoiceError("invalid recording sid")
+        try:
+            r = httpx.delete(
+                f"{self._base}/Recordings/{recording_sid}.json",
+                auth=(self.account_sid, self.auth_token),
+                timeout=self.timeout,
+            )
+        except httpx.HTTPError as exc:
+            raise VoiceError(f"network error: {exc.__class__.__name__}") from exc
+        if r.status_code not in (200, 204, 404):
+            raise VoiceError(f"Twilio HTTP {r.status_code}: {r.text[:200]}")
+
     def response(self) -> VoiceResponse:
         return VoiceResponse()
 
@@ -374,7 +397,7 @@ class WhatsAppCallingProvider:
     def _unavailable(self, *_: Any, **__: Any) -> Any:
         raise VoiceNotConfigured(WHATSAPP_CALLING_NOT_AVAILABLE)
 
-    place_call = hangup = cancel_call = start_recording = response = _unavailable
+    place_call = hangup = cancel_call = start_recording = delete_recording = response = _unavailable
 
 
 # ---------------------------------------------------------------- tenant wiring

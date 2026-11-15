@@ -25,12 +25,14 @@ from app.api.schemas import (
     IntegrationList,
     IntegrationOut,
     IntegrationTestOut,
+    STTStatusOut,
+    STTTestOut,
     WebhookSubscriptionCreated,
     WebhookSubscriptionList,
     WebhookSubscriptionOut,
     error_responses,
 )
-from app.models import Integration, Notification, OutboxEvent, WebhookSubscription
+from app.models import Integration, Notification, OutboxEvent, Tenant, WebhookSubscription
 from app.security import encrypt_secret, random_token
 from app.services import webhooks_out
 from app.services.audit import audit
@@ -104,6 +106,39 @@ def list_integrations(
     ctx: AuthContext = Depends(require("integrations.read")), db: Session = Depends(get_db)
 ):
     return {"items": [public_config(get_integration(db, ctx.tenant_id, k), k) for k in INTEGRATION_KINDS]}
+
+
+# ---------------------------------------------------------------- speech-to-text (platform-level, env config)
+# Declared before "/{kind}/test" so that "stt" is not taken for an integration kind.
+@router.get("/stt", response_model=STTStatusOut)
+def stt_status(ctx: AuthContext = Depends(require("integrations.read"))):
+    """Active speech-to-text provider for WhatsApp voice notes (STT_PROVIDER / STT_MODEL; the key is never
+    returned)."""
+    from app.ai import stt
+
+    return stt.stt_status()
+
+
+@router.post("/stt/test", response_model=STTTestOut)
+def stt_test(ctx: AuthContext = Depends(require("integrations.write")), db: Session = Depends(get_db)):
+    """Transcribe a bundled 1 s sample with the active provider and report latency / error."""
+    from app.ai import stt
+
+    tenant_lang = db.scalar(select(Tenant.default_language).where(Tenant.id == ctx.tenant_id))
+    result = stt.test_provider("kk" if tenant_lang == "kk" else "ru")
+    audit(
+        db,
+        ctx.tenant_id,
+        "user",
+        str(ctx.user.id),
+        "integration.test",
+        "integration",
+        "stt",
+        {"ok": result["ok"], "provider": result["provider"]},
+        ip=ctx.ip,
+    )
+    db.commit()
+    return result
 
 
 @router.put(

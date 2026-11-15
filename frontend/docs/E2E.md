@@ -1,5 +1,18 @@
 # Browser E2E tests
 
+## Stage v1.1 without a backend
+
+Run `npx playwright test --config playwright.v11.config.ts` from `frontend/`.
+This configuration starts Next.js on port 3100 with an isolated `.next-v11`
+directory. Every `/v1/` request is intercepted in the browser; no database or
+backend is needed. For installed Chrome on Windows, set `$env:E2E_CHANNEL = 'chrome'`
+before running the command. Otherwise install Playwright Chromium first.
+
+`v11-security.spec.ts` covers sessions, password changes, logout and the one-time
+401 notice. `v11-communication.spec.ts` covers team sign-out, voice note states,
+the STT card, permission restrictions and Kazakh labels. Both run on desktop and
+mobile, including axe checks and horizontal overflow checks.
+
 The suite exercises the real seeded API and frontend with Chromium at 1440×1000
 and 390×844. Use a disposable demo database: tests write bookings, payments,
 contacts, conversations, tasks, leads, services and staff.

@@ -41,7 +41,7 @@ settings = get_settings()
 validate_settings(settings)  # refuse to start with default/placeholder secrets in production
 app = FastAPI(
     title="AI CRM API",
-    version="1.0.0",
+    version="1.1.0",
     description="WhatsApp AI agent · booking engine · CRM · Telegram escalation · analytics",
 )
 app.add_middleware(

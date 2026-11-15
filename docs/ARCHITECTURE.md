@@ -67,7 +67,7 @@ flowchart LR
 ## 3. Модель данных (обзор)
 
 Все бизнес-таблицы содержат `tenant_id`. Схема — `backend/app/models.py`, миграции — `backend/alembic/versions/`
-(`0001_initial`, `0002_voice_calls`).
+(`0001_initial`, `0002_voice_calls`, `0003_auth_sessions`).
 
 | Область | Таблицы |
 |---|---|

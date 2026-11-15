@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Membership, Staff, User
 from app.security import decode_access_token
+from app.services.auth_sessions import check_session
 from app.services.audit import audit
 
 # Permission matrix (ТЗ §2). Keys are permission names used by routers.
@@ -43,6 +44,7 @@ PERMISSIONS: dict[str, set[str]] = {
     "integrations.write": {"owner"},
     "settings.write": {"owner"},
     "users.write": {"owner"},
+    "team.manage": {"owner", "admin"},  # sign a team member out of all sessions
     "audit.read": {"owner"},
 }
 
@@ -55,6 +57,7 @@ class AuthContext:
     branch_scope: list[str] = field(default_factory=list)
     staff_id: uuid.UUID | None = None
     ip: str | None = None
+    session_id: uuid.UUID | None = None
 
     def can(self, perm: str) -> bool:
         return self.role in PERMISSIONS.get(perm, set())
@@ -79,7 +82,13 @@ def get_auth(
         claims = decode_access_token(authorization.split(" ", 1)[1])
     except Exception as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token") from exc
-    user = db.get(User, uuid.UUID(claims["sub"]))
+    try:
+        user_uuid = uuid.UUID(str(claims["sub"]))
+        session = check_session(db, claims.get("sid"), user_uuid)
+    except (ValueError, LookupError) as exc:
+        # revoked / expired / unknown session, or a v1.0 token without "sid" -> the client must log in again
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired") from exc
+    user = db.get(User, user_uuid)
     if not user or not user.active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User inactive")
 
@@ -113,6 +122,7 @@ def get_auth(
         branch_scope=[str(b) for b in (membership.branch_scope or [])],
         staff_id=staff_id,
         ip=ip,
+        session_id=session.id,
     )
 
 

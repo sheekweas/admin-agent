@@ -90,8 +90,9 @@ def voice(
     db: Session = Depends(get_db),
 ):
     """Voice channel KPIs (ТЗ §13.4) over client calls created in [date_from, date_to] (organisation local
-    dates, both optional). Admin escalation IVR calls are excluded."""
-    return voice_calls.voice_report(db, ctx.tenant_id, date_from, date_to)
+    dates, both optional). Admin escalation IVR calls are excluded; a branch-scoped user only sees calls of
+    their branches."""
+    return voice_calls.voice_report(db, ctx.tenant_id, date_from, date_to, ctx.branch_scope)
 
 
 def _export(fmt: str, db: Session, ctx: AuthContext, f: svc.ReportFilter) -> Response:

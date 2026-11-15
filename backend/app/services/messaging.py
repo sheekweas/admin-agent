@@ -237,19 +237,54 @@ def _lang(conv: Conversation) -> str:
     return conv.language if conv.language in ("ru", "kk") else "ru"
 
 
-def _transcribe(db: Session, conv: Conversation, msg: Message) -> None:
+_STT_REASK = {
+    "ru": "Извините, не удалось разобрать голосовое сообщение. Повторите, пожалуйста, или напишите текстом.",
+    "kk": "Кешіріңіз, дауыстық хабарламаны анық түсіне алмадым. Қайталап жіберіңізші немесе мәтінмен жазыңыз.",
+}
+# Consecutive unintelligible voice notes before the dialogue is handed to a human instead of re-asking again.
+STT_MAX_REASKS = 2
+
+
+def _stt_meta(
+    provider: str,
+    *,
+    transcribed: bool,
+    confidence: float | None = None,
+    language: str | None = None,
+    error: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "transcribed": transcribed,
+        "stt": provider,
+        "stt_confidence": confidence,
+        "stt_language": language if language in ("ru", "kk") else None,
+        "stt_error": error,
+    }
+
+
+def _transcribe(db: Session, conv: Conversation, msg: Message, threshold: float) -> bool:
+    """Transcribe a voice note into msg.text and fill the voice-note meta. Returns True when the result is
+    unintelligible (empty text or confidence below the tenant threshold). Provider errors propagate."""
     from app.ai.stt import get_stt
     from app.channels.whatsapp import WhatsAppAdapter
 
+    stt = get_stt()
+    msg.meta = {**(msg.meta or {}), **_stt_meta(stt.name, transcribed=False)}
     audio, mime = b"", (msg.meta or {}).get("mime") or "audio/ogg"
     if msg.media_url and conv.channel == "whatsapp":
         audio, mime = WhatsAppAdapter.for_tenant(db, conv.tenant_id).download_media(msg.media_url)
-    stt = get_stt()
     tr = stt.transcribe(audio, mime, conv.language)
-    msg.text = tr.text
-    msg.meta = {**(msg.meta or {}), "transcribed": True, "stt": stt.name}
+    text = (tr.text or "").strip()
+    low = not text or (tr.confidence is not None and tr.confidence < threshold)
+    msg.text = text
+    msg.meta = {
+        **(msg.meta or {}),
+        **_stt_meta(stt.name, transcribed=bool(text), confidence=tr.confidence, language=tr.language),
+        **({"stt_low_confidence": True} if low else {}),
+    }
     if tr.language in ("ru", "kk"):
         msg.language = tr.language
+    return low
 
 
 def _fallback(db: Session, conv: Conversation, msg: Message, reason: str) -> Message | None:
@@ -279,6 +314,13 @@ def _fallback(db: Session, conv: Conversation, msg: Message, reason: str) -> Mes
         log.exception("could not create admin task for AI fallback")
     conv.mode = "waiting_admin"  # a human owns it now; AI stays silent until released
     return reply
+
+
+def _tag_voice(db: Session, tenant_id: uuid.UUID, conv: Conversation) -> None:
+    try:
+        crm.add_contact_tags(db, tenant_id, conv.contact_id, ["голосовое сообщение"])
+    except Exception:
+        log.exception("tagging failed")
 
 
 def process_ai_turn(
@@ -338,18 +380,35 @@ def process_ai_turn(
         return None
 
     if msg.message_type == "audio" and not msg.text:
+        threshold = float(
+            (merged_settings(tenant).get("voice", {}) if tenant else {}).get("low_confidence_threshold") or 0
+        )
         try:
-            _transcribe(db, conv, msg)
+            low = _transcribe(db, conv, msg, threshold)
         except Exception as exc:  # noqa: BLE001 - STT not configured / provider down
             log.warning("voice transcription failed: %s", exc)
-            msg.meta = {**(msg.meta or {}), "stt_error": str(exc)[:300]}
-            try:
-                crm.add_contact_tags(db, tenant_id, conv.contact_id, ["голосовое сообщение"])
-            except Exception:
-                log.exception("tagging failed")
+            meta = msg.meta or {}
+            msg.meta = {
+                **meta,
+                **_stt_meta(str(meta.get("stt") or "none"), transcribed=False, error=str(exc)[:300]),
+            }
+            _tag_voice(db, tenant_id, conv)
             if conv.mode == "ai" and ai_enabled:
                 return _fallback(db, conv, msg, f"stt: {exc}")
             return None
+        state = dict(conv.state or {})
+        if low:
+            streak = int(state.get("stt_low_confidence_streak") or 0) + 1
+            conv.state = {**state, "stt_low_confidence_streak": streak}
+            if conv.mode != "ai" or not ai_enabled:
+                return None
+            if streak > STT_MAX_REASKS:
+                _tag_voice(db, tenant_id, conv)
+                return _fallback(db, conv, msg, "stt: low confidence")
+            lang = msg.language if msg.language in ("ru", "kk") else _lang(conv)
+            return send_client_message(db, tenant_id, conv.id, _STT_REASK[lang], author="ai")
+        if state.get("stt_low_confidence_streak"):
+            conv.state = {k: v for k, v in state.items() if k != "stt_low_confidence_streak"}
 
     if conv.mode != "ai" or not ai_enabled:
         return None
@@ -664,4 +723,6 @@ def message_to_dict(m: Message) -> dict[str, Any]:
         "author_user_id": str(m.author_user_id) if m.author_user_id else None,
         "error": m.error,
         "language": m.language,
+        # voice notes: transcribed, stt, stt_confidence, stt_language, stt_error[, stt_low_confidence]
+        "meta": dict(m.meta or {}),
     }

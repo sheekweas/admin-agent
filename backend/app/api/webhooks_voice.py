@@ -7,7 +7,8 @@ AI calls with clients:
   POST /v1/webhooks/voice/{provider}/answer?call_id=    our outbound call was answered
   POST /v1/webhooks/voice/{provider}/turn?call_id=&seq= one recognised utterance (SpeechResult, Confidence)
   POST /v1/webhooks/voice/{provider}/dial?call_id=      result of the transfer to an admin (DialCallStatus)
-  POST /v1/webhooks/voice/{provider}/recording?call_id= recording ready (stored only with consent)
+  POST /v1/webhooks/voice/{provider}/recording?call_id= recording ready (stored only with consent;
+                                                        otherwise deleted at the provider)
 Both:
   POST /v1/webhooks/voice/{provider}/status[?call_id=]  call status (without call_id: looked up by CallSid)
 
@@ -251,8 +252,8 @@ async def voice_dial(provider: str, request: Request, db: Session = Depends(get_
 @router.post("/{provider}/recording", response_model=OkOut, responses=FORBIDDEN)
 async def voice_recording(provider: str, request: Request, db: Session = Depends(get_db)):
     call, form = await _load(provider, request, db)
-    stored = voice_calls.apply_recording(voice_calls.lock_call(db, call.id), form)
+    stored = voice_calls.apply_recording(db, voice_calls.lock_call(db, call.id), form)
     if not stored:
-        log.info("recording for call %s ignored (no consent / not completed)", call.id)
+        log.info("recording for call %s not stored (no consent / not completed)", call.id)
     db.commit()
     return {"ok": True}

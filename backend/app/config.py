@@ -62,6 +62,14 @@ class Settings(BaseSettings):
     # VoiceNotConfigured with an explanation (the flag only exists to wire a future BSP integration).
     whatsapp_calling_enabled: bool = False
 
+    # Speech-to-text for WhatsApp voice notes (app.ai.stt). STT_PROVIDER: "openai_compatible" (OpenAI Whisper,
+    # Groq, self-hosted faster-whisper) | "mock" | "none"; empty -> "mock" in WhatsApp mock mode, else "none".
+    stt_provider: str | None = None
+    stt_base_url: str | None = None  # e.g. https://api.openai.com/v1
+    stt_api_key: str | None = None  # never logged / returned by the API
+    stt_model: str = "whisper-1"
+    stt_timeout_sec: float = 30.0
+
     # Outbound webhooks (Zapier etc.)
     webhook_max_attempts: int = 8
 

@@ -15,21 +15,24 @@ function headersFor(options: RequestInit) {
   }
   return headers;
 }
-async function request(path:string,options:RequestInit={}) {
+export type ApiOptions = RequestInit & {silent?:boolean;handleUnauthorized?:boolean};
+async function request(path:string,options:ApiOptions={}) {
+  const {silent,handleUnauthorized=true,...fetchOptions}=options;
   let response:Response;
-  try { response=await fetch(`${API_URL}${path}`,{...options,headers:headersFor(options)}); }
-  catch { const error=new ApiError(0,'NETWORK_ERROR',typeof window!=='undefined' && localStorage.getItem('crm:lang')==='kk'?'Сервермен байланыс жоқ':'Нет соединения с сервером'); notify(error.message,'error'); throw error; }
+  try { response=await fetch(`${API_URL}${path}`,{...fetchOptions,headers:headersFor(options)}); }
+  catch { const error=new ApiError(0,'NETWORK_ERROR',typeof window!=='undefined' && localStorage.getItem('crm:lang')==='kk'?'Сервермен байланыс жоқ':'Нет соединения с сервером'); if(!silent)notify(error.message,'error'); throw error; }
   if(!response.ok) {
     const payload=await response.json().catch(()=>({}));
     const detail=payload.detail ?? payload;
     const message=typeof detail==='string'?detail:Array.isArray(detail)?detail.map((e:{msg:string})=>e.msg).join('; '):detail.message || response.statusText;
-    const code=detail.code||payload.code||(typeof detail==='string'&&knownVoiceErrorMessage(detail)?detail:'API_ERROR');
+    const code=detail.code||payload.code||(typeof detail==='string'&&(/^[A-Z][A-Z_]+$/.test(detail)||knownVoiceErrorMessage(detail))?detail:'API_ERROR');
     const language=typeof window!=='undefined'&&localStorage.getItem('crm:lang')==='kk'?'kk':'ru';
     const error=new ApiError(response.status,code,knownVoiceErrorMessage(code,language)||message,detail.alternatives||payload.alternatives||[]);
-    if(response.status===401 && typeof window!=='undefined') {localStorage.removeItem('crm:token');localStorage.removeItem('crm:tenant');window.dispatchEvent(new Event('crm:unauthorized'));}
-    notify(error.message,'error');throw error;
+    const expired=handleUnauthorized && response.status===401 && typeof window!=='undefined' && path!=='/v1/auth/login';
+    if(expired && localStorage.getItem('crm:token')) {sessionStorage.setItem('crm:session-ended','1');localStorage.removeItem('crm:token');localStorage.removeItem('crm:tenant');localStorage.removeItem('crm:tenants');window.dispatchEvent(new Event('crm:unauthorized'));}
+    if(!silent&&!expired)notify(error.message,'error');throw error;
   }
   return response;
 }
-export async function api<T>(path:string,options:RequestInit={}):Promise<T> { const response=await request(path,options);return response.status===204?undefined as T:await response.json() as T; }
+export async function api<T>(path:string,options:ApiOptions={}):Promise<T> { const response=await request(path,options);return response.status===204?undefined as T:await response.json() as T; }
 export async function download(path:string,filename:string) {const response=await request(path);const url=URL.createObjectURL(await response.blob());const link=document.createElement('a');link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
