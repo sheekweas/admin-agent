@@ -19,6 +19,6 @@ export default defineConfig({
     url: 'http://localhost:3100/login',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { NEXT_DIST_DIR: '.next-v11', NEXT_PUBLIC_API_URL: 'http://localhost:8000' },
+    env: { NEXT_PUBLIC_API_URL: 'http://localhost:8000' },
   },
 });

@@ -1,7 +1,12 @@
 # Changelog
 
 Формат: [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии — [SemVer](https://semver.org/lang/ru/).
-Источник: `git log --oneline --decorate` (теги `v0.1.0` … `v1.1.0`).
+Источник: `git log --oneline --decorate` (теги `v0.1.0` … `v1.1.1`).
+
+## [1.1.1] — 2026-11-15
+### Исправлено
+- `frontend/next-env.d.ts` и `tsconfig.json` в v1.1.0 ссылались на временную папку `.next-v11` (артефакт dev-сервера
+  Playwright) — `tsc` на чистой машине падал. Файлы восстановлены, `playwright.v11.config.ts` больше не меняет `distDir`.
 
 ## [1.1.0] — 2026-11-15 — закрытие технических пробелов
 
